@@ -3,20 +3,25 @@
 import threading
 import time
 import traceback
+from collections.abc import Callable
 from contextlib import suppress
+from typing import TYPE_CHECKING, Any
 
 import sdl3w as S
 import steam_shortcut as ssc
 from applog import _log
 from appsettings import _SC_OSK_OPEN_CHORDS
 from steamcontroller import SCButtons, SteamController
+
+if TYPE_CHECKING:
+    pass
 from triton import applook
 from triton import screen as triton_screen
 from triton import skins as triton_skins
 from triton import state as triton_state
 from triton import triton as triton_app
 from triton.win32 import _foreground_exe_name
-from watchers import _Watcher
+from watchers import _ChordState, _Watcher
 from win_focus import (
     _capture_active_appid,
     _foreground_target_hwnd,
@@ -49,6 +54,19 @@ def _verify_force_appid(steam_path, appid):
 
 
 class _LauncherMixin:
+    # Attributes provided by the composed tray App (declared here so static
+    # tooling knows the mixin's contract — see tray/app.py __init__).
+    settings: dict
+    _stop_event: threading.Event
+    _launcher_wake: threading.Event
+    _open_kbd_event: threading.Event
+    _chord: _ChordState
+    _current_sc: SteamController | None
+    _persistent_sc: SteamController | None
+    _notify: Callable[[str, str], None]
+    _refresh_menu: Callable[[], None]
+    _icon_ref: Any
+
     def _rebuild_cached_screen(self):
         """Destroy and recreate the cached OSK Screen so a new "Size" setting
         takes effect on the next open. Only safe while the OSK is closed (the
@@ -340,6 +358,9 @@ class _LauncherMixin:
                 self._persistent_sc_exclusive = use_exclusive
             else:
                 sc = self._persistent_sc
+                assert sc is not None, (
+                    "need_rebuild is False only when _persistent_sc is set"
+                )
                 sc._cb = watcher.on_input
             self._current_sc = sc
             try:

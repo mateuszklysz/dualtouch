@@ -99,7 +99,10 @@ def _current_user_sid_str():
     ):
         return None
     try:
-        return ctypes.wstring_at(p_str.value)
+        v = p_str.value
+        if v is None:
+            return None
+        return ctypes.wstring_at(v)
     finally:
         kernel32.LocalFree(p_str.value)
 

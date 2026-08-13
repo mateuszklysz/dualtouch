@@ -185,7 +185,7 @@ class ExclusiveHidDevice:
         return 0
 
     def read(self, length, timeout_ms=None):
-        if self._handle is None:
+        if self._handle is None or self._read_ov is None:
             return []
         n = max(int(length), self._input_len)
         buf = (ctypes.c_ubyte * n)()
@@ -225,7 +225,7 @@ class ExclusiveHidDevice:
         return list(buf[: nread.value])
 
     def write(self, data):
-        if self._handle is None:
+        if self._handle is None or self._write_ov is None:
             return -1
         n = self._output_len
         b = bytes(data)[:n].ljust(n, b"\x00")

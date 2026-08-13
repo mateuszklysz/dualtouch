@@ -1,6 +1,7 @@
 import time
 from collections import deque
 from threading import Lock
+from typing import TYPE_CHECKING
 
 import steamcontroller.uinput as sui
 from steamcontroller import SCI_NULL, SCButtons, SCStatus
@@ -12,18 +13,21 @@ from triton.screen import CoordFraction
 from triton.stick import _StickMixin
 from triton.triggers import _TriggerMixin
 
+if TYPE_CHECKING:
+    from triton.vptr import VirtualPointer
+
 
 class ControllerState:
     click_queue = deque()
 
-    _pointers = None
+    _pointers: "tuple[VirtualPointer, VirtualPointer] | None" = None
     _pointer_lock = Lock()
 
     def set_pointers(self, ptr_left, ptr_right):
         with self._pointer_lock:
             self._pointers = (ptr_left, ptr_right)
 
-    def get_pointers(self):
+    def get_pointers(self) -> "tuple[VirtualPointer, VirtualPointer] | None":
         # Returns the SAME tuple (no deepcopy): a published pointer is never
         # mutated after it is smoothed+published — handle_input creates a fresh
         # VirtualPointer each frame and only the fresh one's coord is updated

@@ -4,6 +4,19 @@ from triton import state
 
 
 class _StickMixin:
+    # Attributes provided by the composed ControllerManager (declared here so
+    # static tooling knows the mixin's contract — see controller.py).
+    _kb: sui.Keyboard
+    STICK_DEADZONE: int
+    STICK_HOLD_DELAY: float
+    STICK_VOL_REPEAT: float
+    KBD_STICK_HOLD_DELAY: float
+    KBD_STICK_REPEAT: float
+    KBD_STICK_DEADZONE: int
+    KBD_SCROLL_HOLD_DELAY: float
+    KBD_SCROLL_REPEAT: float
+    _SCROLL_ARROW_KEYS: dict
+
     # Steam + left-stick media zone -> keycode map (built once; a fresh dict
     # per input frame is pure waste).
     _MEDIA_ZONE_KEYS = {

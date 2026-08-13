@@ -211,14 +211,15 @@ class Keyboard:
         OS shift only."""
         try:
             kb = self._kb
-            with kb._modifiers_lock:
+            # pynput internals (exist at runtime; absent from its stubs).
+            with kb._modifiers_lock:  # type: ignore[reportAttributeAccessIssue]
                 for mod in (
                     kb._Key.shift.value,
                     kb._Key.shift_l.value,
                     kb._Key.shift_r.value,
                 ):
-                    kb._modifiers.discard(mod)
-            kb._caps_lock = False
+                    kb._modifiers.discard(mod)  # type: ignore[reportAttributeAccessIssue]
+            kb._caps_lock = False  # type: ignore[reportAttributeAccessIssue]
         except Exception:
             pass
 
@@ -233,9 +234,10 @@ class Keyboard:
         internal state. Called at OSK open so a fresh session starts clean."""
         try:
             kb = self._kb
-            with kb._modifiers_lock:
-                kb._modifiers.clear()
-            kb._caps_lock = False
+            # pynput internals (exist at runtime; absent from its stubs).
+            with kb._modifiers_lock:  # type: ignore[reportAttributeAccessIssue]
+                kb._modifiers.clear()  # type: ignore[reportAttributeAccessIssue]
+            kb._caps_lock = False  # type: ignore[reportAttributeAccessIssue]
         except Exception:
             pass
 
@@ -357,7 +359,9 @@ class Keyboard:
                 # held shift would drop the user's shift early.
                 shift_needed = state_bits & 0x01
                 shift_held = bool(user32.GetAsyncKeyState(0x10) & 0x8000)
-                ok = self._tap_vk(scan & 0xFF, shift_needed and not shift_held)
+                ok = self._tap_vk(
+                    scan & 0xFF, bool(shift_needed) and not shift_held
+                )
                 self._diag(
                     f"tap_char U+{ord(char):04X} vk 0x{scan:04x} state={state_bits} ok={ok}"
                 )

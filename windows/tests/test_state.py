@@ -41,7 +41,9 @@ def test_key_press_queue_order_and_repeat_flag():
 
 def test_key_press_queue_coerces_to_ints():
     state.reset_session()
-    state.queue_key_press("2", "5", "yes")
+    # Deliberately passing strings: the point is that int()/bool() coercion
+    # normalizes them.
+    state.queue_key_press("2", "5", "yes")  # type: ignore[reportArgumentType]
     assert state.drain_key_press_queue() == [(2, 5, True, False)]
 
 

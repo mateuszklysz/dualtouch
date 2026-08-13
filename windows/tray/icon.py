@@ -25,14 +25,18 @@ def _load_icon_image():
         # by downscaling, not upscaling, then LANCZOS to the exact size.
         sizes = sorted(ico.info.get("sizes", [ico.size]))
         pick = next((s for s in sizes if s[0] >= target), sizes[-1])
-        ico.size = pick
-        return ico.convert("RGBA").resize((target, target), Image.LANCZOS)
+        # PIL's ICO plugin lets you pick the embedded frame by setting .size
+        # (runtime-valid; the stub types ImageFile.size as read-only).
+        ico.size = pick  # type: ignore[reportAttributeAccessIssue]
+        return ico.convert("RGBA").resize(
+            (target, target), Image.Resampling.LANCZOS
+        )
 
     fallback = os.path.join(base, "glyphs", "glyph_keyboard.png")
     if os.path.isfile(fallback):
         return (
             Image.open(fallback)
             .convert("RGBA")
-            .resize((target, target), Image.LANCZOS)
+            .resize((target, target), Image.Resampling.LANCZOS)
         )
     raise FileNotFoundError("no tray icon found under data/images/")

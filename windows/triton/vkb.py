@@ -902,6 +902,8 @@ def _process_click_item(virtual_kb, item):
     # ordinary keys (matches the X-button delete repeat).
     is_repeat = isinstance(item, tuple) and item and item[0] == "repeat"
     coord = item[1] if is_repeat else item
+    if isinstance(coord, tuple):
+        return  # unexpected tagged item — drop defensively
     x, y = coord.to_absolute()
     # Expanded hit-target (small grab radius): a pad click a few px over a
     # key boundary / in a gap still lands on the intended key, so fast

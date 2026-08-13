@@ -3,6 +3,7 @@
 import os
 import threading
 from contextlib import suppress
+from typing import Any
 
 import pystray
 import steam_shortcut as ssc
@@ -501,7 +502,7 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
             icon.notify(message, title)
 
     # Set by main() so the tray menu can be rebuilt when the OSK opens/closes.
-    _icon_ref = None
+    _icon_ref: Any = None
 
     def _refresh_menu(self):
         """Rebuild the tray menu so the dynamic Open/Close Keyboard label

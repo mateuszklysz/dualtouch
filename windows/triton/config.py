@@ -24,6 +24,9 @@ class YamlFile:
         self.yaml_data = {}
 
     def read(self):
+        assert self.file_path is not None, (
+            f"{self.filename} has no resolved file path!"
+        )
         with open(self.file_path, encoding="utf-8") as file:
             self.yaml_data = yaml.safe_load(file)
 

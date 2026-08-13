@@ -1,10 +1,48 @@
+from collections import deque
+from typing import Protocol
+
 import steamcontroller.uinput as sui
 
 from triton import diacritics, state, vkb
 from triton.screen import CoordFraction
 
 
+class _PadClickHost(Protocol):
+    """Subset of sui.Keyboard the pad mixin drives (press/release a key)."""
+
+    def pressEvent(self, keys) -> None: ...
+
+    def releaseEvent(self, keys) -> None: ...
+
+
+class _PadControllerState(Protocol):
+    """Subset of controller.ControllerState the pad mixin reads/writes."""
+
+    click_queue: deque
+
+    def set_pointers(self, ptr_left, ptr_right) -> None: ...
+
+
+class _PadFrame(Protocol):
+    """Subset of SteamControllerInput the pad mixin reads (button mask)."""
+
+    buttons: int
+
+
 class _PadMixin:
+    # Attributes provided by the composed ControllerManager (declared here so
+    # static tooling knows the mixin's contract — see controller.py __init__).
+    _kb: _PadClickHost
+    controller_state: _PadControllerState
+    sc_input_previous: _PadFrame
+    _click_repeat_at: dict
+    _click_settle_at: dict
+    _pad_click_engage: float
+    _pad_click_release: float
+    _pad_press_hold: float
+    BACKSPACE_HOLD_DELAY: float
+    BACKSPACE_REPEAT: float
+
     # Horizontal pad travel (raw units) that fires one Shift+Left/Right arrow
     # while the Select key is held. The pad x range is +/-0x8000 for a finger
     # on the pad; this step means roughly the full pad width selects ~16

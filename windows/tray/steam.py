@@ -1,7 +1,9 @@
 """Steam keyboard-layer mixin."""
 
 import json
+import threading
 import traceback
+from collections.abc import Callable
 
 import steam_shortcut as ssc
 from applog import _log
@@ -9,6 +11,13 @@ from appsettings import _save_settings
 
 
 class _SteamLayerMixin:
+    # Attributes provided by the composed tray App (declared here so static
+    # tooling knows the mixin's contract — see tray/app.py __init__).
+    settings: dict
+    _stop_event: threading.Event
+    _steam_watch_wake: threading.Event
+    _notify: Callable[[str, str], None]
+
     # Steam keyboard-layer switching (see steam_shortcut.py) ----------------
 
     def is_steam_kbd_layer_checked(self, item):

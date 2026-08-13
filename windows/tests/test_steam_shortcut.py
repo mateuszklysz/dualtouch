@@ -54,6 +54,7 @@ def _target(steam, ud):
 def test_target_path_uses_lowercased_appname(fake_steam):
     steam, ud = fake_steam
     t = default_controller_config_target(str(steam))
+    assert t is not None
     assert t == _target(steam, ud)
     assert os.path.basename(os.path.dirname(t)) == SHORTCUT_APPNAME.lower()
 

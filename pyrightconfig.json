@@ -1,0 +1,30 @@
+{
+  "typeCheckingMode": "basic",
+  "pythonPlatform": "Windows",
+  "executionEnvironments": [
+    {
+      "root": "windows"
+    }
+  ],
+  "include": ["windows"],
+  "reportMissingTypeStubs": "none",
+  "reportMissingParameterType": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportAny": "none",
+  "reportMissingTypeArgument": "none",
+  "reportUnannotatedClassAttribute": "none",
+  "reportImplicitStringConcatenation": "none",
+  "reportPrivateLocalImportUsage": "none",
+  "reportUnusedFunction": "none",
+  "reportUnusedClass": "none",
+  "reportUnusedCallResult": "none",
+  "reportUnusedVariable": "none",
+  "reportPrivateUsage": "none",
+  "reportUnusedImport": "none",
+  "reportMissingImports": "warning",
+  "reportGeneralTypeIssues": "none"
+}

@@ -81,6 +81,7 @@ def test_select_key_reachable_at_window_edge():
         if key.is_select
     ][0]
     layout = kb.get_key_layout(r, c)
+    assert layout is not None
     # A press on the Select key's own center must resolve back to it.
     key = kb.find_key_expanded(
         layout.x + layout.w // 2, layout.y + layout.h // 2
@@ -106,14 +107,16 @@ class _KB:
     def __init__(self):
         self.downs = []
 
-    def pressEvent(self, k):
-        self.downs.append(k)
+    def pressEvent(self, keys):
+        self.downs.append(keys)
 
-    def releaseEvent(self, k):
+    def releaseEvent(self, keys):
         pass
 
 
 class _Dummy(_PadMixin):
+    _kb: _KB
+
     def __init__(self):
         self._kb = _KB()
         self._select_pad = 1
@@ -230,24 +233,35 @@ def test_clickbutton_select_place_then_drag():
     from triton import state as _st
     from triton.screen import CoordFraction
 
-    class _KB:
+    class _LocalKB:
         def __init__(self):
             self.downs = []
             self.shift = 0
 
-        def pressEvent(self, k):
-            if k == ["KEY_LEFTSHIFT"]:
+        def pressEvent(self, keys):
+            if keys == ["KEY_LEFTSHIFT"]:
                 self.shift += 1
             else:
-                self.downs.append(k)
+                self.downs.append(keys)
 
-        def releaseEvent(self, k):
-            if k == ["KEY_LEFTSHIFT"]:
+        def releaseEvent(self, keys):
+            if keys == ["KEY_LEFTSHIFT"]:
                 self.shift -= 1
 
-    class _D(_PadMixin):
+    class _P:
+        def __init__(self, buttons):
+            self.buttons = buttons
+
+    class _CS:
         def __init__(self):
-            self._kb = _KB()
+            self.click_queue = []
+
+    class _D(_PadMixin):
+        _kb: _LocalKB
+        controller_state: _CS
+
+        def __init__(self):
+            self._kb = _LocalKB()
             self._prev_buttons = 0
             self._select_pad = None
             self._select_anchor_x = 0.0
@@ -257,7 +271,7 @@ def test_clickbutton_select_place_then_drag():
             self._select_real_touch = False
             self._click_settle_at = {}
             self._click_repeat_at = {}
-            self.controller_state = type("CS", (), {"click_queue": []})()
+            self.controller_state = _CS()
 
         def _is_select_key(self, coord_frac):
             return True
@@ -267,7 +281,7 @@ def test_clickbutton_select_place_then_drag():
     _st.set_select_active(False)
 
     def frame(buttons, real_touch, raw_x, now):
-        d.sc_input_previous = type("P", (), {"buttons": d._prev_buttons})()
+        d.sc_input_previous = _P(d._prev_buttons)
         ret = d.handle_pad_input(
             CoordFraction(0.9, 0.9),
             buttons,

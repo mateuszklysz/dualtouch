@@ -21,7 +21,10 @@ def _is_frozen():
 def _bundle_dir():
     """Directory containing read-only bundled resources (data/, glyphs)."""
     if _is_frozen():
-        return sys._MEIPASS
+        # PyInstaller sets sys._MEIPASS at bootstrap; not in typeshed stubs.
+        return getattr(
+            sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))
+        )
     return os.path.dirname(os.path.abspath(__file__))
 
 

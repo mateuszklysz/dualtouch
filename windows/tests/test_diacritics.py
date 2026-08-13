@@ -88,6 +88,7 @@ def test_row_rect_clamps_top_for_top_row():
     rect = diacritics.variant_row_rect(
         KeyLayout(300, 5, 90, 67, 0, 1), 4, 1286
     )
+    assert rect is not None
     assert rect[1] == 0  # never goes above the window
 
 
@@ -192,8 +193,11 @@ def test_tap_char_builds_sendinput_unicode():
     def _stub_vkscan(ch):
         return -1
 
-    user32.VkKeyScanW = _stub_vkscan
-    user32.OpenClipboard = lambda hwnd: 0  # paste path refuses -> UNICODE
+    def _stub_openclipboard(_hwnd):
+        return 0  # paste path refuses -> UNICODE
+
+    setattr(user32, "VkKeyScanW", _stub_vkscan)  # noqa: B010
+    setattr(user32, "OpenClipboard", _stub_openclipboard)  # noqa: B010
 
     def fake_send(n, inputs, cb):
         calls["n"] = int(n)
@@ -205,16 +209,16 @@ def test_tap_char_builds_sendinput_unicode():
         ]
         return 2
 
-    user32.SendInput = fake_send
+    setattr(user32, "SendInput", fake_send)  # noqa: B010
     try:
         kb = sui.Keyboard()
         assert kb.tap_char("á") is True
         assert kb.tap_char("") is False  # empty: refused, no SendInput
         assert kb.tap_char("\U0001f600") is False  # non-BMP: refused
     finally:
-        user32.SendInput = real_send
-        user32.VkKeyScanW = real_vkscan
-        user32.OpenClipboard = real_openclip
+        setattr(user32, "SendInput", real_send)  # noqa: B010
+        setattr(user32, "VkKeyScanW", real_vkscan)  # noqa: B010
+        setattr(user32, "OpenClipboard", real_openclip)  # noqa: B010
 
     # Two inputs (key-down + key-up), correct struct size, VK 0 + the char's
     # code unit, KEYEVENTF_UNICODE (0x0004) and UNICODE|KEYUP (0x0006).
@@ -249,8 +253,11 @@ def test_tap_char_altgr_skips_vk_and_uses_unicode():
     def _stub_vkscan(ch):
         return 0x0653  # VK 'S' (0x53) + modifier CTRL|ALT (0x06) = AltGr ś
 
-    user32.VkKeyScanW = _stub_vkscan
-    user32.OpenClipboard = lambda hwnd: 0  # paste refuses -> UNICODE fallback
+    def _stub_openclipboard(_hwnd):
+        return 0  # paste refuses -> UNICODE fallback
+
+    setattr(user32, "VkKeyScanW", _stub_vkscan)  # noqa: B010
+    setattr(user32, "OpenClipboard", _stub_openclipboard)  # noqa: B010
 
     calls["kis"] = []
 
@@ -268,14 +275,14 @@ def test_tap_char_altgr_skips_vk_and_uses_unicode():
         )
         return n
 
-    user32.SendInput = fake_send
+    setattr(user32, "SendInput", fake_send)  # noqa: B010
     try:
         kb = sui.Keyboard()
         assert kb.tap_char("ś") is True
     finally:
-        user32.SendInput = real_send
-        user32.VkKeyScanW = real_vkscan
-        user32.OpenClipboard = real_openclip
+        setattr(user32, "SendInput", real_send)  # noqa: B010
+        setattr(user32, "VkKeyScanW", real_vkscan)  # noqa: B010
+        setattr(user32, "OpenClipboard", real_openclip)  # noqa: B010
 
     # NO bare-VK / AltGr chord: the only inputs are the UNICODE pair
     # (wVk=0, wScan=U+015B "ś", KEYEVENTF_UNICODE 0x0004 + KEYUP 0x0006).
@@ -303,7 +310,7 @@ def test_tap_char_uses_vk_for_plain_letter():
     def _stub_vkscan(ch):
         return 0x0064  # VK 'd', no modifier
 
-    user32.VkKeyScanW = _stub_vkscan
+    setattr(user32, "VkKeyScanW", _stub_vkscan)  # noqa: B010
     calls["kis"] = []
 
     def fake_send(n, inputs, cb):
@@ -320,13 +327,13 @@ def test_tap_char_uses_vk_for_plain_letter():
         )
         return n  # every event delivered
 
-    user32.SendInput = fake_send
+    setattr(user32, "SendInput", fake_send)  # noqa: B010
     try:
         kb = sui.Keyboard()
         assert kb.tap_char("d") is True
     finally:
-        user32.SendInput = real_send
-        user32.VkKeyScanW = real_vkscan
+        setattr(user32, "SendInput", real_send)  # noqa: B010
+        setattr(user32, "VkKeyScanW", real_vkscan)  # noqa: B010
 
     # Plain VK path: VK 'd' down + up (one event per SendInput call).
     assert calls["kis"] == [(0x64, 0, 0), (0x64, 0, 0x0002)]
@@ -362,13 +369,25 @@ def test_pad_hold_opens_row_and_release_commits_variant():
         def __init__(self):
             self.downs = []
 
-        def pressEvent(self, k):
-            self.downs.append(k)
+        def pressEvent(self, keys):
+            self.downs.append(keys)
 
-        def releaseEvent(self, k):
+        def releaseEvent(self, keys):
             pass
 
+    class _P:
+        def __init__(self, buttons):
+            self.buttons = buttons
+
+    class _CS:
+        def __init__(self):
+            self.click_queue = deque()
+
     class _D(_PadMixin):
+        _kb: _KB
+        sc_input_previous: _P
+        controller_state: _CS
+
         BACKSPACE_HOLD_DELAY = vkb.KEY_REPEAT_DELAY
         BACKSPACE_REPEAT = vkb.KEY_REPEAT_INTERVAL
         PAD_CLICK_SETTLE = 0.05
@@ -384,15 +403,15 @@ def test_pad_hold_opens_row_and_release_commits_variant():
             self._select_dir = 0
             self._select_base_dir = 0
             self._select_reverse_buffer = []
-            self.sc_input_previous = type("P", (), {"buttons": 0})()
-            self.controller_state = type("CS", (), {"click_queue": deque()})()
+            self.sc_input_previous = _P(0)
+            self.controller_state = _CS()
             self._prev = 0
 
         def _is_select_key(self, coord_frac):
             return False
 
         def frame(self, buttons, cf, raw_x, now, real_touch=True):
-            self.sc_input_previous = type("P", (), {"buttons": self._prev})()
+            self.sc_input_previous = _P(self._prev)
             r = self.handle_pad_input(
                 cf,
                 buttons,
@@ -411,6 +430,7 @@ def test_pad_hold_opens_row_and_release_commits_variant():
 
     LPADTOUCH, LT, LPAD = 0x00000200, 0x00000100, 0x00000400
     a_layout = kb.get_key_layout(3, 1)  # 'a'
+    assert a_layout is not None
     cf = CoordFraction.from_absolute(
         a_layout.x + a_layout.w // 2, a_layout.y + a_layout.h // 2
     )
@@ -429,6 +449,7 @@ def test_pad_hold_opens_row_and_release_commits_variant():
     assert state.is_diacritic_open()
     assert list(d.controller_state.click_queue) == []
     sess = state.get_diacritic()
+    assert sess is not None
     assert sess[0] == "a" and len(sess[1]) == 8 and sess[4] == "pad"
 
     # 3) Finger over candidate 2 in the row -> index 2.
@@ -489,13 +510,25 @@ def test_pad_release_with_finger_lifted_still_commits_and_unlatches():
         def __init__(self):
             self.downs = []
 
-        def pressEvent(self, k):
-            self.downs.append(k)
+        def pressEvent(self, keys):
+            self.downs.append(keys)
 
-        def releaseEvent(self, k):
+        def releaseEvent(self, keys):
             pass
 
+    class _P:
+        def __init__(self, buttons):
+            self.buttons = buttons
+
+    class _CS:
+        def __init__(self):
+            self.click_queue = deque()
+
     class _D(_PadMixin):
+        _kb: _KB
+        sc_input_previous: _P
+        controller_state: _CS
+
         BACKSPACE_HOLD_DELAY = vkb.KEY_REPEAT_DELAY
         BACKSPACE_REPEAT = vkb.KEY_REPEAT_INTERVAL
         PAD_CLICK_SETTLE = 0.05
@@ -511,15 +544,15 @@ def test_pad_release_with_finger_lifted_still_commits_and_unlatches():
             self._select_dir = 0
             self._select_base_dir = 0
             self._select_reverse_buffer = []
-            self.sc_input_previous = type("P", (), {"buttons": 0})()
-            self.controller_state = type("CS", (), {"click_queue": deque()})()
+            self.sc_input_previous = _P(0)
+            self.controller_state = _CS()
             self._prev = 0
 
         def _is_select_key(self, coord_frac):
             return False
 
         def frame(self, buttons, cf, raw_x, now, real_touch=True):
-            self.sc_input_previous = type("P", (), {"buttons": self._prev})()
+            self.sc_input_previous = _P(self._prev)
             r = self.handle_pad_input(
                 cf,
                 buttons,
@@ -538,6 +571,7 @@ def test_pad_release_with_finger_lifted_still_commits_and_unlatches():
 
     LPADTOUCH, LT, LPAD = 0x00000200, 0x00000100, 0x00000400
     a_layout = kb.get_key_layout(3, 1)  # 'a'
+    assert a_layout is not None
     cf = CoordFraction.from_absolute(
         a_layout.x + a_layout.w // 2, a_layout.y + a_layout.h // 2
     )
@@ -553,6 +587,7 @@ def test_pad_release_with_finger_lifted_still_commits_and_unlatches():
     d.frame(LPADTOUCH | LT | LPAD, cf, 0, t)
     assert state.is_diacritic_open()
     sess = state.get_diacritic()
+    assert sess is not None
     rx, ry, _rw, _rh = sess[3]
 
     # 3) Finger over candidate 2 -> index 2.
@@ -600,7 +635,8 @@ def test_pad_release_with_finger_lifted_still_commits_and_unlatches():
     d.frame(0, cf, 0, t, real_touch=False)
     q = d.controller_state.click_queue.popleft()
     assert isinstance(q, tuple) and q[0] == "deferred"
-    assert kb.find_key_expanded(*q[1].to_absolute()).str == "a"
+    key = kb.find_key_expanded(*q[1].to_absolute())
+    assert key is not None and key.str == "a"
 
 
 def test_pad_quick_tap_types_base_on_release():
@@ -627,13 +663,25 @@ def test_pad_quick_tap_types_base_on_release():
     state.set_active_locale("en")
 
     class _KB:
-        def pressEvent(self, k):
+        def pressEvent(self, keys):
             pass
 
-        def releaseEvent(self, k):
+        def releaseEvent(self, keys):
             pass
+
+    class _P:
+        def __init__(self, buttons):
+            self.buttons = buttons
+
+    class _CS:
+        def __init__(self):
+            self.click_queue = deque()
 
     class _D(_PadMixin):
+        _kb: _KB
+        sc_input_previous: _P
+        controller_state: _CS
+
         BACKSPACE_HOLD_DELAY = vkb.KEY_REPEAT_DELAY
         BACKSPACE_REPEAT = vkb.KEY_REPEAT_INTERVAL
         PAD_CLICK_SETTLE = 0.05
@@ -649,15 +697,15 @@ def test_pad_quick_tap_types_base_on_release():
             self._select_dir = 0
             self._select_base_dir = 0
             self._select_reverse_buffer = []
-            self.sc_input_previous = type("P", (), {"buttons": 0})()
-            self.controller_state = type("CS", (), {"click_queue": deque()})()
+            self.sc_input_previous = _P(0)
+            self.controller_state = _CS()
             self._prev = 0
 
         def _is_select_key(self, coord_frac):
             return False
 
         def frame(self, buttons, cf, raw_x, now, real_touch=True):
-            self.sc_input_previous = type("P", (), {"buttons": self._prev})()
+            self.sc_input_previous = _P(self._prev)
             r = self.handle_pad_input(
                 cf,
                 buttons,
@@ -676,6 +724,7 @@ def test_pad_quick_tap_types_base_on_release():
 
     LPADTOUCH, LT, LPAD = 0x00000200, 0x00000100, 0x00000400
     a_layout = kb.get_key_layout(3, 1)  # 'a'
+    assert a_layout is not None
     cf = CoordFraction.from_absolute(
         a_layout.x + a_layout.w // 2, a_layout.y + a_layout.h // 2
     )
@@ -698,7 +747,8 @@ def test_pad_quick_tap_types_base_on_release():
     # Deferred release: a ("deferred", coord) marker so the main-thread
     # dispatch types the base WITHOUT a second click sound.
     assert isinstance(q, tuple) and q[0] == "deferred"
-    assert kb.find_key_expanded(*q[1].to_absolute()).str == "a"
+    key = kb.find_key_expanded(*q[1].to_absolute())
+    assert key is not None and key.str == "a"
 
 
 def test_pad_quick_tap_base_release_with_real_leftpad_values():
@@ -729,13 +779,25 @@ def test_pad_quick_tap_base_release_with_real_leftpad_values():
     state.set_active_locale("en")
 
     class _KB:
-        def pressEvent(self, k):
+        def pressEvent(self, keys):
             pass
 
-        def releaseEvent(self, k):
+        def releaseEvent(self, keys):
             pass
+
+    class _P:
+        def __init__(self, buttons):
+            self.buttons = buttons
+
+    class _CS:
+        def __init__(self):
+            self.click_queue = deque()
 
     class _D(_PadMixin):
+        _kb: _KB
+        sc_input_previous: _P
+        controller_state: _CS
+
         BACKSPACE_HOLD_DELAY = vkb.KEY_REPEAT_DELAY
         BACKSPACE_REPEAT = vkb.KEY_REPEAT_INTERVAL
         PAD_CLICK_SETTLE = 0.05
@@ -751,15 +813,15 @@ def test_pad_quick_tap_base_release_with_real_leftpad_values():
             self._select_dir = 0
             self._select_base_dir = 0
             self._select_reverse_buffer = []
-            self.sc_input_previous = type("P", (), {"buttons": 0})()
-            self.controller_state = type("CS", (), {"click_queue": deque()})()
+            self.sc_input_previous = _P(0)
+            self.controller_state = _CS()
             self._prev = 0
 
         def _is_select_key(self, coord_frac):
             return False
 
         def frame(self, buttons, cf, raw_x, now, real_touch=True):
-            self.sc_input_previous = type("P", (), {"buttons": self._prev})()
+            self.sc_input_previous = _P(self._prev)
             r = self.handle_pad_input(
                 cf,
                 buttons,
@@ -778,6 +840,7 @@ def test_pad_quick_tap_base_release_with_real_leftpad_values():
 
     LPADTOUCH, LT, LPAD = 0x00000200, 0x00000100, 0x00000400
     a_layout = kb.get_key_layout(3, 1)  # 'a'
+    assert a_layout is not None
     cf = CoordFraction.from_absolute(
         a_layout.x + a_layout.w // 2, a_layout.y + a_layout.h // 2
     )
@@ -795,7 +858,8 @@ def test_pad_quick_tap_base_release_with_real_leftpad_values():
     assert d._deferred_base == {}
     q = d.controller_state.click_queue.popleft()
     assert isinstance(q, tuple) and q[0] == "deferred"
-    assert kb.find_key_expanded(*q[1].to_absolute()).str == "a"
+    key = kb.find_key_expanded(*q[1].to_absolute())
+    assert key is not None and key.str == "a"
 
 
 def test_open_diacritic_rc_refuses_impossible_row():
@@ -855,6 +919,7 @@ def test_open_diacritic_rc_carries_base_case_into_variants():
 
         assert vkb.open_diacritic_rc(kb, 3, 1, "pad") is True  # 'a'
         sess = state.get_diacritic()
+        assert sess is not None
         # The variants row is uppercase, matching the uppercase base the hold
         # typed into the field.
         assert all(ch.isupper() for ch in sess[1])
@@ -865,6 +930,8 @@ def test_open_diacritic_rc_carries_base_case_into_variants():
         state.set_shift_held(False)
         state.close_diacritic()
         assert vkb.open_diacritic_rc(kb, 3, 1, "pad") is True
-        assert all(ch.islower() for ch in state.get_diacritic()[1])
+        sess2 = state.get_diacritic()
+        assert sess2 is not None
+        assert all(ch.islower() for ch in sess2[1])
     finally:
         state.is_caps_on = real_caps

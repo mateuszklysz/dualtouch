@@ -8,6 +8,7 @@ remembered look on open). No SDL window / display / controller needed.
 """
 
 import types
+from typing import Any, cast
 
 from triton import applook
 from triton import state as triton_state
@@ -134,7 +135,7 @@ def test_apply_app_look_applies_per_app_size_and_skin(monkeypatch):
 
     triton_state.set_osk_size_per_app({"notepad.exe": "small"})
     triton_state.set_skin_per_app({"notepad.exe": "Digital"})
-    L._LauncherMixin._apply_app_look(fake)
+    L._LauncherMixin._apply_app_look(cast(Any, fake))
     # Per-app size differs from the active one -> republish + rebuild the
     # cached Screen (size is baked in at construction).
     assert calls["size"] == ["small"]
@@ -169,7 +170,7 @@ def test_apply_app_look_falls_back_to_global_when_no_entry(monkeypatch):
     # does not rebuild the cached Screen.
     triton_state.set_osk_size_per_app({})
     triton_state.set_skin_per_app({})
-    L._LauncherMixin._apply_app_look(fake)
+    L._LauncherMixin._apply_app_look(cast(Any, fake))
     assert calls["size"] == []
     assert calls["rebuild"] == 0
     assert calls["skin"] == ["Gruvbox"]
@@ -178,6 +179,6 @@ def test_apply_app_look_falls_back_to_global_when_no_entry(monkeypatch):
     # renamed) falls back to the default rather than a no-palette skin.
     triton_state.set_skin_per_app({"notepad.exe": "RemovedSkin"})
     calls["skin"].clear()
-    L._LauncherMixin._apply_app_look(fake)
+    L._LauncherMixin._apply_app_look(cast(Any, fake))
     assert calls["skin"] == [Tskins.DEFAULT_SKIN]
     _clear_per_app_state()

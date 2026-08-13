@@ -1,12 +1,24 @@
 """Battery status and USB device-watch mixin."""
 
+import threading
 import time
+from collections.abc import Callable
 from contextlib import suppress
+from typing import Any
 
+from steamcontroller import SteamController
 from triton import state as triton_state
 
 
 class _BatteryMixin:
+    # Attributes provided by the composed tray App (declared here so static
+    # tooling knows the mixin's contract — see tray/app.py __init__).
+    _stop_event: threading.Event
+    _current_sc: SteamController | None
+    _icon_ref: Any
+    _notify: Callable[[str, str], None]
+    _refresh_menu: Callable[[], None]
+
     # battery status --------------------------------------------------------
 
     # Discharge bands that trigger a low-battery toast (and a haptic nudge),

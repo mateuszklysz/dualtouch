@@ -99,7 +99,7 @@ def _parse_battery(data):
     )
 
 
-def _parse_triton(data: bytes) -> SteamControllerInput:
+def _parse_triton(data: bytes) -> SteamControllerInput | None:
     """Parse a 54-byte Triton input report into the SCI tuple."""
     if (
         len(data) < TRITON_INPUT_MIN_LEN

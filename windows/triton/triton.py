@@ -116,6 +116,7 @@ def _begin_open_anim(scr, virtual_kb, controller_state, rest):
     # the moment the animation ends (the caller resets clickthrough_on).
     _set_click_through(scr.window, False)
     pointers = controller_state.get_pointers()
+    assert pointers is not None, "open anim runs after set_pointers publishes"
     # fade=0 + full cut => a fully transparent frame: the window is invisible the
     # instant it's shown, then the loop fades/reveals it in.
     if not scr.render_open_anim(virtual_kb, pointers, 0.0, _OPEN_ANIM_CUT_PX):
@@ -498,7 +499,7 @@ def main(cached_screen=None, on_close=None):
                 )  # keep geometry.py in sync
                 # New key geometry must repaint even if the content signature
                 # is otherwise unchanged (dirty-frame gate in Screen).
-                screen._resize_dirty = True
+                scr._resize_dirty = True
             # Mouse control: hovering highlights the key under the pointer,
             # left-click presses it (the Shift key toggles latched Shift), and
             # the standard side buttons handle the keys you can't otherwise
@@ -922,6 +923,9 @@ def main(cached_screen=None, on_close=None):
             if now >= next_render:
                 next_render = now + _RENDER_INTERVAL
                 pointers = controller_state.get_pointers()
+                assert pointers is not None, (
+                    "render loop only runs after set_pointers publishes"
+                )
                 if open_anim_start is not None:
                     # --- OSK OPEN animation frame ---
                     p = (now - open_anim_start) / _OPEN_ANIM_SECS

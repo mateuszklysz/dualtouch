@@ -121,12 +121,6 @@ from win_focus import (  # noqa: E402 -- needs sys.path set above
 )
 
 
-def _mk_log(tmpdir):
-    logs = os.path.join(str(tmpdir), "logs")
-    os.makedirs(logs, exist_ok=True)
-    return os.path.join(logs, "controller_ui.txt")
-
-
 def test_captures_desktop_appid(tmpdir, monkeypatch):
     _fake_steam_reg(monkeypatch, tmpdir)
     path = _mk_log(tmpdir)
@@ -414,19 +408,19 @@ def test_reset_shift_state_clears_internal_desync():
     a = Keyboard()  # like vkb.kb (OSK mouse clicks)
     b = Keyboard()  # like controller self._kb (L2-held shift)
     # Silence real OS events; we only test pynput's internal bookkeeping.
-    a._kb._handle = lambda key, is_press: None
-    b._kb._handle = lambda key, is_press: None
+    a._kb._handle = lambda key, is_press: None  # type: ignore[reportAttributeAccessIssue]
+    b._kb._handle = lambda key, is_press: None  # type: ignore[reportAttributeAccessIssue]
 
     # Scenario A: Shift pressed on A, released on B (paste/emoji/arrow re-press).
     a._kb.press(a._kb._Key.shift)
     b._kb.release(b._kb._Key.shift)
     assert a._kb.shift_pressed is True
-    resolved = a._kb._resolve(a._kb._KeyCode.from_char("a"))
+    resolved = a._kb._resolve(a._kb._KeyCode.from_char("a"))  # type: ignore[reportAttributeAccessIssue]
     assert resolved.char == "A"  # the bug: uppercased by internal state
 
     a.reset_shift_state()
     assert a._kb.shift_pressed is False
-    resolved2 = a._kb._resolve(a._kb._KeyCode.from_char("a"))
+    resolved2 = a._kb._resolve(a._kb._KeyCode.from_char("a"))  # type: ignore[reportAttributeAccessIssue]
     assert resolved2.char == "a"  # fixed: lowercase follows real OS shift
 
     # Scenario B: single on-screen Caps tap flips internal _caps_lock.

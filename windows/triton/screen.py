@@ -537,8 +537,15 @@ class Screen:
         are returned unchanged."""
         r, g, b, a = pil.split()
         lum = PILImage.merge("RGB", (r, g, b)).convert("L")
-        dark = lum.point(lambda v: 255 if v < 64 else 0)
-        opaque = a.point(lambda v: 255 if v > 128 else 0)
+
+        def _white_if_dark(v: int) -> int:
+            return 255 if v < 64 else 0
+
+        def _white_if_opaque(v: int) -> int:
+            return 255 if v > 128 else 0
+
+        dark = lum.point(_white_if_dark)
+        opaque = a.point(_white_if_opaque)
         dark_opaque = PILImageChops.multiply(dark, opaque).histogram()[255]
         if dark_opaque < 50:
             return pil
@@ -554,7 +561,8 @@ class Screen:
         pil = self._normalize_glyph(PILImage.open(path).convert("RGBA"))
         if max(pil.size) > self._glyph_cache_px:
             pil.thumbnail(
-                (self._glyph_cache_px, self._glyph_cache_px), PILImage.LANCZOS
+                (self._glyph_cache_px, self._glyph_cache_px),
+                PILImage.Resampling.LANCZOS,
             )
         w, h = pil.size
         data = pil.tobytes()

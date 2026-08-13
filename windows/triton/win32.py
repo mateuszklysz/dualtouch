@@ -439,7 +439,7 @@ def _focus_log(msg):
     log_line("triton", msg)
 
 
-def _fg_desc(osk_hwnd=0):
+def _fg_desc(osk_hwnd: int | None = 0):
     """Identify the current foreground window (pid + class ONLY — never the
     window TITLE or HWND, which are surveillance-sensitive in the log),
     plus whether the OSK still has its WS_EX_NOACTIVATE bit (a lost bit
