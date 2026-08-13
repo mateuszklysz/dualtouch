@@ -1,0 +1,24 @@
+# Runtime dependencies for the Windows app (windows/tray.py and friends).
+
+# (No PySDL2 — rendering/input go through the vendored hand-rolled sdl3w
+#  ctypes binding; SDL3 DLLs ship in windows/sdl3w/dll.)
+Pillow
+pynput
+# Pinned: hidapi 0.15.0's Windows wheel ships no module files (import hid
+# fails with ModuleNotFoundError), which also silently breaks the built EXE.
+hidapi==0.14.0.post2
+PyYAML
+pystray
+# Process enumeration for windows/tray.py: Steam-running detection
+# (_steam_running, which gates the Steam Input OSK keyboard-layer switch
+# and the close-time lizard-restore skip) and the Steam+B force-kill chord.
+psutil
+# Steam shortcuts.vdf binary VDF parsing/writing (windows/steam_shortcut.py
+# registers the "DualTouch Keyboard Layer" non-Steam shortcut).
+vdf
+
+# ---- Linux only ----
+PyGObject<3.52 ; sys_platform == "linux" # gi / AppIndicator tray backend (linux/tray_linux.py)
+
+# ---- build tool (used by CI to produce the release binaries) ----
+pyinstaller

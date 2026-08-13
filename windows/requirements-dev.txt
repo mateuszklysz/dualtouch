@@ -1,0 +1,4 @@
+# Dev/test dependencies for DualTouch (not shipped in the app).
+# Install: pip install -r requirements-dev.txt
+# Run:    cd windows && python -m pytest tests -q
+pytest

@@ -1,0 +1,31 @@
+# —— Secrets ——
+Github_token.txt
+Github_Token.txt
+*.pem
+*.key
+
+# —— Python ——
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+
+# —— Build / PyInstaller output ——
+build/
+dist/
+
+# —— Editor / OS / agent scratch ——
+AGENTS.md
+CLAUDE.md
+*.tmp
+*.log
+.DS_Store
+node_modules/
+.idea/
+.opencode/
+opencode.json

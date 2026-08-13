@@ -1,0 +1,16 @@
+# Ruff configuration for DualTouch.
+# Line length: 79 is the codebase's existing style; keep it.
+line-length = 79
+
+[lint]
+# Pragmatic rule set: pycodestyle errors (E/F), unused imports/args (F),
+# imports (I), pyupgrade (UP), flake8-bugbear (B), and flake8-simplify (SIM).
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    # E501 (line too long) is handled by ruff-format; don't double-report.
+    "E501",
+]
+
+[lint.per-file-ignores]
+# Tests may use bare asserts and fixtures with unused params.
+"tests/*.py" = ["B017"]
