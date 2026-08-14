@@ -1,10 +1,11 @@
 """Steam on-screen-keyboard skins.
 
-Each skin is one of Steam's official OSK theme CSS files, bundled under
-data/skins/<Name>.css. We don't render CSS — Steam's web keyboard and ours
-both draw the keys procedurally and only tint them — so a "skin" here is just
-the handful of color variables Steam exposes, mapped onto the flat SDL palette
-in screen.Screen.
+Most skins are Valve's official OSK themes, loaded at runtime from Steam's
+live theme bundle (steam_assets.read_theme_rule). "Gruvbox" — the app's own
+original theme — is bundled under data/skins/. We don't render CSS — Steam's
+web keyboard and ours both draw the keys procedurally and only tint them — so
+a "skin" here is just the handful of color variables, mapped onto the flat
+SDL palette in screen.Screen.
 
 Steam's CSS uses a few forms we have to flatten to opaque RGB:
   * #rrggbb / #rgb               → straight RGB
@@ -23,14 +24,15 @@ from triton import resources
 from triton.color import Color
 
 # "Gruvbox" is the default look: near-black OLED palette with cream labels and
-# a dark-grey cursor. The built-in screen.Screen palette matches it as the
-# no-CSS fallback.
+# a dark-grey cursor. It's the app's own original theme, bundled under
+# data/skins/ — Steam's themes load from the install at runtime.
 DEFAULT_SKIN = "Gruvbox"
 
-# Display order for the tray submenu. Default skin first. Any bundled .css
-# not listed here is appended alphabetically by available_skins().
+# Display order for the tray submenu. Default skin first. Any Steam theme not
+# listed here is appended alphabetically by available_skins().
 _SKIN_ORDER = [
     "Gruvbox",
+    "DefaultTheme",
     "Digital",
     "NightShift",
     "Ruby",
@@ -108,27 +110,60 @@ def get_generation():
     return _generation
 
 
-def _skins_dir():
-    """Directory holding the bundled skin CSS, or None. Resolved by locating
-    the always-present default-skin CSS and taking its parent."""
+def _read_theme_css(name):
+    """Theme CSS text for `name`: Steam's live OSK theme bundle first, then
+    the bundled data/skins/<Name>.css copy for the original Gruvbox skin
+    (which Steam doesn't ship). None when neither is available."""
+    try:
+        from steam_assets import read_theme_rule
+
+        rule = read_theme_rule(name)
+        if rule:
+            return rule
+    except Exception:
+        pass
+    path = resources.find_data_resource("skins/" + name + ".css")
+    if not path:
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+def _steam_theme_names():
+    try:
+        from steam_assets import list_theme_names
+
+        return list_theme_names()
+    except Exception:
+        return []
+
+
+def _bundled_skin_names():
+    """Names of bundled original skins under data/skins/ (Gruvbox), taken
+    from the dir holding the always-present default-skin CSS. Empty when the
+    bundle dir is missing."""
     p = resources.find_data_resource("skins/" + DEFAULT_SKIN + ".css")
-    return os.path.dirname(p) if p else None
+    if not p:
+        return []
+    d = os.path.dirname(p)
+    try:
+        return sorted(
+            fn[:-4] for fn in os.listdir(d) if fn.lower().endswith(".css")
+        )
+    except OSError:
+        return []
 
 
 def available_skins():
-    """Bundled skin names (no .css), in display order, that actually exist."""
-    out = [
-        n
-        for n in _SKIN_ORDER
-        if resources.find_data_resource("skins/" + n + ".css")
-    ]
-    d = _skins_dir()
-    if d and os.path.isdir(d):
-        for fn in sorted(os.listdir(d)):
-            if fn.lower().endswith(".css"):
-                nm = fn[:-4]
-                if nm not in out:
-                    out.append(nm)
+    """Steam OSK themes + bundled original skins, display order first. Any
+    Steam theme not in _SKIN_ORDER is appended alphabetically."""
+    steam = set(_steam_theme_names())
+    bundled = set(_bundled_skin_names())
+    out = [n for n in _SKIN_ORDER if n in steam or n in bundled]
+    out += [n for n in sorted(steam) if n not in out]
     return out or [DEFAULT_SKIN]
 
 
@@ -252,13 +287,8 @@ def load_palette(name):
 
     Roles: bg, key_inactive, key_hover, key_click, text_inactive, text_hover,
     modifier, shadow, highlight."""
-    path = resources.find_data_resource("skins/" + name + ".css")
-    if not path:
-        return None
-    try:
-        with open(path, encoding="utf-8") as f:
-            css = f.read()
-    except OSError:
+    css = _read_theme_css(name)
+    if not css:
         return None
     v = _parse_vars(css)
     if not v:

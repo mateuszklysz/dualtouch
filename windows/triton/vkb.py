@@ -307,7 +307,9 @@ class KeyButton:
         self.valign = (
             valign  # "top" | "center" | "bottom" — vertical label alignment.
         )
-        self.glyph = glyph  # Path-relative filename in data/images/glyphs/ (e.g. "glyph_l2.png").
+        self.glyph = glyph  # Glyph name resolved from the Steam install via
+        # steam_assets (e.g. "glyph_l2.png"); names with no Steam file (the
+        # smiley, touch-cursor visuals) load from the bundled copy.
         self.font = font  # "default" | "symbol" — picks the symbol font for glyphs Segoe lacks.
         self.text_color = (
             text_color  # Optional Color overriding INACTIVE text color.

@@ -83,7 +83,7 @@ menus), or by hand-editing `settings.json` for finer control.
 | `sc_pad_click_engage` | `2500` | Pad force that fires the pad-click insert |
 | `sc_left_stick_nav` | `true` | Sticks control the keyboard while it is open |
 | `sc_osk_trigger_actuation` | `"default"` | L2/R2 actuation point: `"default"` or `"low"` |
-| `skin` | `"Gruvbox"` | Keyboard skin (a `.css` under `data/skins/`) |
+| `skin` | `"Gruvbox"` | Keyboard skin: Steam OSK themes load from the Steam install; Gruvbox is the bundled original |
 | `osk_size` | `"medium"` | `"small"`/`"medium"`/`"full"` |
 | `osk_transparency` | `"off"` | `"off"`/`"low"`/`"medium"`/`"high"` |
 | `key_sound_enabled_sc` | `true` | Steam keyboard click sound |
@@ -129,9 +129,5 @@ and partly as a real-world example of what that workflow can produce.
 
 GNU LGPL v3 — see [LICENSE](LICENSE).
 
-**Third-party assets.** The keyboard skin themes and controller-button glyphs
-under `data/skins/` and `data/images/glyphs/` are inherited from the upstream
-SteamlessKeyboard fork and are Valve's on-screen-keyboard themes/artwork,
-used for their intended purpose with the Steam Controller. The `Gruvbox` skin
-is original. Sounds are played from the Steam install at runtime and are not
-bundled with this repository.
+**Assets.** Valve's OSK themes and controller glyphs load from the Steam
+install at runtime; bundled graphics are DualTouch's own.
