@@ -105,8 +105,9 @@ class _LauncherMixin:
         skin = applook._skin_for_app(exe, triton_state.get_skin_per_app())
         if skin is None:
             skin = self.settings.get("skin", triton_skins.DEFAULT_SKIN)
-        # A saved per-app skin that no longer matches a bundled skin (removed
-        # or renamed) falls back to the default rather than a no-palette skin.
+        # A saved per-app skin that no longer matches an available skin
+        # (removed from Steam, renamed, or Steam missing) falls back to the
+        # default rather than a no-palette skin.
         if skin not in triton_skins.available_skins():
             skin = triton_skins.DEFAULT_SKIN
         triton_skins.set_active_skin(skin)

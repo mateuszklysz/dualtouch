@@ -47,9 +47,10 @@ DEFAULT_SETTINGS = {
     # we hold it). Must be enabled before Steam opens the controller to win the
     # grab.
     "block_sc_hid": False,
-    # Name of the selected Steam on-screen-keyboard skin (a .css under
-    # data/skins/). Unlike the others this is a string, not a bool — see the
-    # type-aware coercion in _load_settings. Applied when the OSK next opens.
+    # Name of the selected on-screen-keyboard skin: Steam's OSK themes resolve
+    # from the Steam install at runtime; "Gruvbox" is the bundled original.
+    # Unlike the others this is a string, not a bool — see the type-aware
+    # coercion in _load_settings. Applied when the OSK next opens.
     "skin": "Gruvbox",
     # OSK transparency level (tray "Keyboard Skin → Transparent" submenu): one of
     # "off"/"low"/"medium"/"high". Renders the keyboard with no background and
@@ -197,7 +198,7 @@ def _migrate_old_settings():
 
 
 # Windows absolute-path prefix (drive letter), e.g. "C:" or "c:\...". A skin
-# name must never resolve outside data/skins/ on read.
+# name is matched against Steam theme names — it must never carry a path.
 _WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:")
 
 
@@ -231,12 +232,11 @@ def _coerce_number(val, default):
 
 
 def _valid_skin_name(name):
-    """Return `name` unchanged if it is a safe skin filename — a plain name
-    that can only resolve to a .css under data/skins/ — else None. Rejects
-    non-strings, blank/whitespace-padded names, path separators, ".."
-    traversal, rooted/absolute paths (leading / or \\, or a drive letter), so
-    a hostile settings.json can never make the skin path escape the skins
-    dir on read."""
+    """Return `name` unchanged if it is a safe skin name — a plain identifier
+    (Steam theme class name) — else None. Rejects non-strings,
+    blank/whitespace-padded names, path separators, ".." traversal,
+    rooted/absolute paths (leading / or \\, or a drive letter), so a hostile
+    settings.json can never smuggle a path into the Steam-theme lookup."""
     if not isinstance(name, str):
         return None
     if not name.strip() or name != name.strip():
@@ -285,9 +285,9 @@ def _valid_osk_size_per_app(val):
 def _valid_skin_per_app(val):
     """Filter a malformed/hostile `skin_per_app` map: keep only {exe name:
     safe skin name} entries, each skin checked by _valid_skin_name (a plain
-    name that can only resolve to a .css under data/skins/). Keys that are
-    empty or non-string are dropped; a non-dict value collapses to the empty
-    default. Never raises."""
+    identifier matching a Steam theme name). Keys that are empty or non-string
+    are dropped; a non-dict value collapses to the empty default. Never
+    raises."""
     if not isinstance(val, dict):
         return {}
     out = {}
@@ -317,8 +317,8 @@ def _load_settings():
     # malformed/hostile settings.json can't flip behavior: bools must really
     # be bools (bool("false") is True), numeric keys must be real numbers
     # (not strings), and the skin name must never smuggle path separators
-    # ("skins/" + name + ".css" is a read path). One bad value falls back to
-    # that key's default — never crashes the load. Unknown keys pass through
+    # (it feeds the Steam-theme lookup). One bad value falls back to that
+    # key's default — never crashes the load. Unknown keys pass through
     # unvalidated for forward compat.
     for k, val in data.items():
         if k not in DEFAULT_SETTINGS:

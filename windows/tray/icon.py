@@ -9,8 +9,7 @@ from PIL import Image
 
 def _load_icon_image():
     # Prefer the multi-resolution app_icon.ico (hand-tuned per size, so
-    # the small tray frame is crisp). Falls back to the in-OSK keyboard
-    # glyph PNG if the ico isn't present.
+    # the small tray frame is crisp).
     base = os.path.join(_bundle_dir(), "data", "images")
     try:
         small = ctypes.windll.user32.GetSystemMetrics(49)  # SM_CXSMICON
@@ -32,11 +31,4 @@ def _load_icon_image():
             (target, target), Image.Resampling.LANCZOS
         )
 
-    fallback = os.path.join(base, "glyphs", "glyph_keyboard.png")
-    if os.path.isfile(fallback):
-        return (
-            Image.open(fallback)
-            .convert("RGBA")
-            .resize((target, target), Image.Resampling.LANCZOS)
-        )
     raise FileNotFoundError("no tray icon found under data/images/")

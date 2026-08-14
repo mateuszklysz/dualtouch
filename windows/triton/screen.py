@@ -57,9 +57,8 @@ def get_osk_size():
 
 
 class Screen:
-    # Gruvbox default palette (matches the default Gruvbox skin; used as the
-    # no-CSS fallback): pure-black OLED backgrounds, cream labels, dark-grey
-    # cursor.
+    # Built-in default palette (kept when Steam's theme can't be resolved):
+    # pure-black OLED backgrounds, cream labels, dark-grey cursor.
     bg_color = Color(0x00, 0x00, 0x00)
 
     key_color = {
@@ -508,12 +507,21 @@ class Screen:
     _GLYPH_CACHE_PX = 96
 
     def _get_glyph(self, name):
-        """Load (and cache) a controller-button glyph PNG by basename."""
+        """Load (and cache) a controller-button glyph PNG by basename: from
+        the Steam install (steam_assets) first, then the bundled copy for
+        original assets (touch-circle/glow, smiley) Steam doesn't ship."""
         if name in self._glyph_textures:
             return self._glyph_textures[name]
-        path = resources.find_data_resource("images/glyphs/" + name)
         tex = None
         size = (0, 0)
+        try:
+            from steam_assets import find_glyph_path
+
+            path = find_glyph_path(name)
+        except Exception:
+            path = None
+        if path is None:
+            path = resources.find_data_resource("images/glyphs/" + name)
         if path is not None:
             tex, size = self._load_glyph_texture(path)
         else:
@@ -556,9 +564,14 @@ class Screen:
         return white
 
     def _load_glyph_texture(self, path):
-        """LANCZOS-downsample the source PNG, then upload as an SDL texture
+        """Open a glyph PNG and upload it as an SDL texture: flatten to a
+        white silhouette, LANCZOS-downsample to the cache target, then upload
         with linear filtering for the final on-screen blit."""
-        pil = self._normalize_glyph(PILImage.open(path).convert("RGBA"))
+        try:
+            pil = PILImage.open(path).convert("RGBA")
+        except OSError:
+            return None, (0, 0)
+        pil = self._normalize_glyph(pil)
         if max(pil.size) > self._glyph_cache_px:
             pil.thumbnail(
                 (self._glyph_cache_px, self._glyph_cache_px),
@@ -962,8 +975,9 @@ class Screen:
         form slides down by the same distance and fades out. The lower form is
         either text (`spec["unshifted"]`, the number/punctuation keys) or a glyph
         (`spec["glyph"]`, the Move key's keyboard icon). At the 0/1 extremes this
-        matches the old static layout. (The Move label is grey at both ends, so
-        its grey→grey fade is a no-op — only the slide shows.)"""
+        matches the old static layout. (Modifier dual keys — Paste/Copy, Move —
+        rest in a slight tint of the modifier text color and brighten to it on
+        Shift, like the number keys' "!" preview.)"""
         p = spec["progress"]
         size = spec.get("font_size") or self._FONT_SIZE_DUAL
         font_obj = self._get_sized_font(font, size)
@@ -995,7 +1009,18 @@ class Screen:
         # the same active text color the rest of the keys take in shift state, in
         # BOTH opaque and transparent modes (so "Move" doesn't stay grey).
         top_target = glyph_color if spec.get("glyph") else label_color
-        sh_color = self._lerp_color(self.shadow_label_color, top_target, p)
+        # MODIFIER dual keys (Paste/Copy, Move) rest in a semi-transparent tint
+        # of the modifier text color — the same faded-preview treatment the
+        # number keys give their shifted "!" — but tinted toward the background
+        # only slightly so they stay legible on the modifier button (the
+        # accent-derived shadow was too dark to read there). The slide animation
+        # still runs, and holding Shift brightens them to the full color.
+        rest_color = (
+            self._lerp_color(self.modifier_text_color, self.bg_color, 0.3)
+            if spec.get("modifier")
+            else self.shadow_label_color
+        )
+        sh_color = self._lerp_color(rest_color, top_target, p)
         # Resolve the shifted font at its current interpolated size — re-rastered
         # per frame while the size animates from the small hint to the normal
         # label size.
@@ -1321,6 +1346,7 @@ class Screen:
                     "shifted": kb_key.shifted,
                     "unshifted": kb_key.str,
                     "progress": shift_anim,
+                    "modifier": kb_key.modifier,
                     "font_size": kb_key.font_size or self._FONT_SIZE_DUAL,
                     "legacy_pos": kb_key.legacy_label_pos,
                     "top_dy": kb_key.dual_top_dy,
@@ -1339,6 +1365,7 @@ class Screen:
                     "unshifted": None,
                     "glyph": kb_key.glyph,
                     "progress": shift_anim,
+                    "modifier": kb_key.modifier,
                     "font_size": kb_key.font_size or self._FONT_SIZE_MOD,
                     "top_dy": kb_key.dual_top_dy,
                 }

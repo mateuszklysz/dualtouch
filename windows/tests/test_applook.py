@@ -130,6 +130,9 @@ def test_apply_app_look_applies_per_app_size_and_skin(monkeypatch):
         Tscreen, "set_osk_size", lambda n: calls["size"].append(n)
     )
     monkeypatch.setattr(
+        Tskins, "available_skins", lambda: ["Gruvbox", "Digital"]
+    )
+    monkeypatch.setattr(
         Tskins, "set_active_skin", lambda n: calls["skin"].append(n)
     )
 
@@ -161,6 +164,9 @@ def test_apply_app_look_falls_back_to_global_when_no_entry(monkeypatch):
     monkeypatch.setattr(Tscreen, "get_osk_size", lambda: "medium")
     monkeypatch.setattr(
         Tscreen, "set_osk_size", lambda n: calls["size"].append(n)
+    )
+    monkeypatch.setattr(
+        Tskins, "available_skins", lambda: ["Gruvbox", "Digital"]
     )
     monkeypatch.setattr(
         Tskins, "set_active_skin", lambda n: calls["skin"].append(n)
