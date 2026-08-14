@@ -1,0 +1,15 @@
+{
+  "name": "dualtouch-icon",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Regenerates the DualTouch app icon (HTML/CSS -> SVG via Vercel Satori -> PNG).",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "satori": "^0.29.0",
+    "sharp": "^0.35.3"
+  }
+}

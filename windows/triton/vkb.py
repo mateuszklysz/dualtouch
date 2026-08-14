@@ -386,18 +386,12 @@ def on_key_generic(virtual_kb, keycode):
 
 
 def on_key_backspace(virtual_kb, keycode):
-    # Backspace, or Delete when Shift is held (the shifted "Del" label) —
-    # same shift-mode pattern as Paste/Copy and Move/emoji. Like the shift
-    # paste path, release both shifts first so pynput's stale internal state
-    # can't combine Shift with the backspace/delete, then restore Shift if it
-    # is logically held (an L2-held Shift survives across the tap).
-    shift_held = state.is_shift_held()
-    kb.releaseEvent([sui.Keys.KEY_LEFTSHIFT, sui.Keys.KEY_RIGHTSHIFT])
-    code = sui.Keys.KEY_DELETE if shift_held else keycode
-    kb.pressEvent([code])
-    kb.releaseEvent([code])
-    if shift_held:
-        kb.pressEvent([sui.Keys.KEY_LEFTSHIFT])
+    # Backspace — always. The old Shift+Backspace = Delete shortcut is
+    # removed, so no shift gymnastics are needed here; just clear pynput's
+    # stale internal shift/caps bookkeeping and tap (same as on_key_generic).
+    kb.reset_shift_state()
+    kb.pressEvent([keycode])
+    kb.releaseEvent([keycode])
 
 
 def tap_keycode(keycode):

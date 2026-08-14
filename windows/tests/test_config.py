@@ -104,9 +104,9 @@ def test_key_geometry_tracks_screen_dims_after_update_dimensions():
 
 def test_75pct_layout_has_function_row_and_nav_cluster():
     """The 75% expansion contract: a function row (Esc/F1-F12 + the Home/End/
-    Ins nav keys) sits on top, and Delete lives under Shift+Backspace (same
-    shift-mode pattern as Paste/Copy). PgUp/PgDn are dropped entirely. Guards
-    the row-shift that an F-row introduces (letters move down one row)."""
+    Ins nav keys) sits on top; Backspace types Backspace always (no Delete
+    shortcut). PgUp/PgDn are dropped entirely. Guards the row-shift that an
+    F-row introduces (letters move down one row)."""
     kb_config = vkb.VirtualKeyboardConfig()
     layout = config.YamlFile("keyboard-layout.yaml")
     layout.read()
@@ -124,7 +124,7 @@ def test_75pct_layout_has_function_row_and_nav_cluster():
     assert kb.keys[3][1].str == "a"
 
     # Backspace carries its label text plus the X shortcut icon (the inline
-    # label+glyph keys); Delete is its behavior's shift-mode (no shifted label).
+    # label+glyph keys); it types Backspace always (no Delete shift-mode).
     bs = next(
         k
         for row in kb.keys
