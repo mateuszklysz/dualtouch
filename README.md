@@ -1,21 +1,39 @@
 # DualTouch
 
+<p align="center">
+  <img src="windows/data/images/icon.png" alt="DualTouch" width="220">
+</p>
+
 **A fast, native on-screen keyboard for the Steam Controller on Windows.**
 
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078d6?style=flat-square)
 ![Version](https://img.shields.io/badge/Version-1.1.0-2ea44f?style=flat-square)
 ![License](https://img.shields.io/badge/License-LGPL--3.0-blue?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=flat-square)
 
-DualTouch is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/SteamlessKeyboard)
-(originally from `archshift/triton`) that renders Steam's touch keyboard as a
-native SDL3 overlay. The controller is read straight off the HID device — no
-web layer, no Steam UI stack — so it opens fast, types immediately, and sits
-on top of the desktop, windowed games, and fullscreen apps alike.
+DualTouch is a native SDL3 on-screen keyboard built around the idea of
+Steam's touch keyboard, but with a lot more behind it. The controller is
+read directly from the HID device — no web layer, no Steam UI stack — so it
+opens fast, types immediately, and sits on top of the desktop, windowed
+games, and fullscreen apps alike.
 
-> **Built with AI.** This project exists to test what agent-based software
-> development can do — without it, this project would never have been
-> created. A human drove the direction and did the testing; AI agents wrote
-> the implementation.
+It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/SteamlessKeyboard)
+(originally from `archshift/triton`).
+
+<p align="center">
+  <img src="docs/preview.png" alt="DualTouch on-screen keyboard" width="90%">
+</p>
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Building](#building)
+- [Troubleshooting](#troubleshooting)
+- [Development Notes](#development-notes)
+- [License](#license)
 
 ## Features
 
@@ -24,26 +42,27 @@ on top of the desktop, windowed games, and fullscreen apps alike.
 - **Steam Controller input** — two-finger trackpad typing with hit-target expansion and debounce, DPAD/stick navigation, auto-repeat on held keys, configurable insert control (bumpers or triggers).
 - **Steam Input coexistence** — reads the shared HID alongside Steam Input, switches to a keyboard layer via `steam://forceinputappid`, and restores your config on close.
 - **Opens with a chord** — Steam + X/Y/A/B (configurable) opens the keyboard; Steam's own menu is suppressed via a Guide Button Chord dead-binding.
-- **Per-app look** — remembers the OSK size, skin, and position per foreground app.
+- **Per-app memory** — remembers the OSK size, skin, and position per foreground app.
 - **Sounds & haptics** — Steam's click sound and rumble feedback, both toggleable.
-- **Single instance** — mutex guard prevents two copies from reading the controller.
 - **Tray app** — battery status, open/close keyboard, autostart, chord selection, skin menu.
-- **Runs elevated** — types into Big Picture and UIPI-protected games.
+- **Elevated by design** — runs elevated so it can type into Big Picture and UIPI-protected games.
 
 ## Requirements
 
 - Windows 10 or 11 (64-bit)
-- [Steam](https://store.steampowered.com) — required; DualTouch waits for it and assumes Steam Input is present
-- Python 3.10+ to run from source, or the prebuilt `DualTouch-windows.exe`
+- [Steam](https://store.steampowered.com), running, with Steam Input available — DualTouch waits for it on launch
+- Python 3.10+ if running from source (not needed for the prebuilt exe)
 
-## Quick start
+## Quick Start
 
-**Release build** — run `DualTouch-windows.exe` (requests elevation on start).
-Settings live in `%APPDATA%\DualTouch\settings.json` (auto-created with defaults;
-an older file next to the exe is migrated automatically). Diagnostics go to
-`%APPDATA%\DualTouch\dualtouch.log`.
+**Release build**
 
-**From source:**
+Run `DualTouch-windows.exe` (it will request elevation on start).
+
+- Settings: `%APPDATA%\DualTouch\settings.json` (auto-created with defaults; a legacy file next to the exe is migrated automatically)
+- Logs: `%APPDATA%\DualTouch\dualtouch.log`
+
+**From source**
 
 ```sh
 pip install -r requirements.txt
@@ -54,7 +73,7 @@ python -m tray
 ## Configuration
 
 Most settings are live-editable from the tray (Startup and Steam Controller
-menus) and hand-editable in `settings.json` for fine tuning. Common keys:
+menus), or by hand-editing `settings.json` for finer control.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
@@ -84,15 +103,27 @@ Output: `windows/dist/DualTouch-windows.exe`.
 
 ## Troubleshooting
 
-- **Keyboard doesn't open** — enable logging first (tray: Startup → Enable
-  Logging), then check `%APPDATA%\DualTouch\dualtouch.log`.
-- **Steam Input grabs the controller** — confirm the keyboard-layer shortcut is
-  registered (done automatically into `shortcuts.vdf`) and that the keyboard
-  opened with Steam running; cursor containment and the injected-input gate
-  keep Steam's emulated mouse out of the keyboard.
-- **Controller dead after quitting** — quitting from the tray never dispatches
-  the `/0` restore; if the appid changed another way, relaunch and open/close
-  the keyboard once (or alt-tab) to make Steam re-evaluate.
+**Keyboard doesn't open**
+Enable logging first (tray → Startup → Enable Logging), then check
+`%APPDATA%\DualTouch\dualtouch.log`.
+
+**Steam Input grabs the controller**
+Confirm the keyboard-layer shortcut is registered (done automatically into
+`shortcuts.vdf`) and that the keyboard opened with Steam running; cursor
+containment and the injected-input gate keep Steam's emulated mouse out of
+the keyboard.
+
+**Controller dead after quitting**
+Quitting from the tray never dispatches the `/0` restore; if the appid
+changed another way, relaunch and open/close the keyboard once (or alt-tab)
+to make Steam re-evaluate.
+
+## Development Notes
+
+This project was built through AI-assisted development: a human set the
+direction, reviewed changes, and handled testing, while AI coding agents
+wrote the implementation. It's shared partly as a working keyboard overlay,
+and partly as a real-world example of what that workflow can produce.
 
 ## License
 
@@ -102,4 +133,5 @@ GNU LGPL v3 — see [LICENSE](LICENSE).
 under `data/skins/` and `data/images/glyphs/` are inherited from the upstream
 SteamlessKeyboard fork and are Valve's on-screen-keyboard themes/artwork,
 used for their intended purpose with the Steam Controller. The `Gruvbox` skin
-is original. Sounds are played from the Steam install at runtime, not bundled.
+is original. Sounds are played from the Steam install at runtime and are not
+bundled with this repository.

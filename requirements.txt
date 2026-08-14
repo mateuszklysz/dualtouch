@@ -4,9 +4,7 @@
 #  ctypes binding; SDL3 DLLs ship in windows/sdl3w/dll.)
 Pillow
 pynput
-# Pinned: hidapi 0.15.0's Windows wheel ships no module files (import hid
-# fails with ModuleNotFoundError), which also silently breaks the built EXE.
-hidapi==0.14.0.post2
+hidapi
 PyYAML
 pystray
 # Process enumeration for windows/tray.py: Steam-running detection

@@ -18,8 +18,10 @@ import sys
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 ENTRY = os.path.join("tray", "__main__.py")
 OUTPUT_NAME = "DualTouch-windows"
-APP_ICON_ICO = os.path.join(PROJECT_DIR, "data", "images", "app_icon.ico")
-DATA_DIR = os.path.join(PROJECT_DIR, "data")
+# Paths are relative to PROJECT_DIR (the cwd PyInstaller runs in), so the
+# regenerated .spec keeps relative paths and the build works from any checkout.
+APP_ICON_ICO = os.path.join("data", "images", "app_icon.ico")
+DATA_DIR = os.path.join("data")
 
 
 def _check_icon():
@@ -70,7 +72,7 @@ def _run_pyinstaller():
     # sdl3w loads the vendored SDL3 DLLs at import time, searching
     # <bundle>/sdl3w/dll first (see sdl3w/_loader.py). Ship the pinned SDL3
     # family (SDL3.dll + SDL3_ttf.dll) into that same path inside the EXE.
-    sdl_dll_dir = os.path.join(PROJECT_DIR, "sdl3w", "dll")
+    sdl_dll_dir = os.path.join("sdl3w", "dll")
     sdl_dlls = glob.glob(os.path.join(sdl_dll_dir, "*.dll"))
     if not sdl_dlls:
         raise SystemExit(f"no SDL3 DLLs found in {sdl_dll_dir}")

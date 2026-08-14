@@ -4,8 +4,8 @@
 a = Analysis(
     ['tray/__main__.py'],
     pathex=[],
-    binaries=[('D:/DualTouch/windows/sdl3w/dll/SDL3.dll', 'sdl3w/dll'), ('D:/DualTouch/windows/sdl3w/dll/SDL3_ttf.dll', 'sdl3w/dll')],
-    datas=[('D:/DualTouch/windows/data', 'data')],
+    binaries=[('sdl3w/dll/SDL3.dll', 'sdl3w/dll'), ('sdl3w/dll/SDL3_ttf.dll', 'sdl3w/dll')],
+    datas=[('data', 'data')],
     hiddenimports=['pystray._win32', 'pynput.keyboard._win32', 'pynput.mouse._win32', 'PIL._tkinter_finder', 'sdl3w'],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['D:/DualTouch/windows/data/images/app_icon.ico'],
+    icon=['data/images/app_icon.ico'],
 )

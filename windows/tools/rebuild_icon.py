@@ -138,7 +138,9 @@ def main():
     print(f"wrote {_CAPSULE} (icon {CAPSULE_ICON}px)")
 
     # wide_capsule.png: landscape tile.
-    _centered_tile(icon, WIDE_CAPSULE_SIZE, WIDE_CAPSULE_ICON).save(_WIDE_CAPSULE)
+    _centered_tile(icon, WIDE_CAPSULE_SIZE, WIDE_CAPSULE_ICON).save(
+        _WIDE_CAPSULE
+    )
     print(f"wrote {_WIDE_CAPSULE} (icon {WIDE_CAPSULE_ICON}px)")
 
     # hero.png: banner with the wireframe on the right.
