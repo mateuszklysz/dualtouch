@@ -640,6 +640,9 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         if state.is_ctrl_latched():
             highlights.add(sui.Keys.KEY_LEFTCTRL)
             highlights.add(sui.Keys.KEY_RIGHTCTRL)
+        if state.is_alt_latched():
+            highlights.add(sui.Keys.KEY_LEFTALT)
+            highlights.add(sui.Keys.KEY_RIGHTALT)
         if l3_pressed and not steam_now:
             highlights.add(sui.Keys.KEY_CAPSLOCK)
         if sc_input.buttons & SCButtons.X:

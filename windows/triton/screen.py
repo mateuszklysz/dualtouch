@@ -1210,6 +1210,9 @@ class Screen:
         rpad_touched = state.is_rpad_touched()
         cursor_row, cursor_col = state.get_cursor()
         mouse_press_cell = state.get_mouse_press_cell()
+        # Modifiers latched via the on-screen toggle — rendered as a stable
+        # "held" highlight, never a press animation (see the press-anim block).
+        latched_mod_keys = state.get_latched_modifier_keys()
 
         # Advance the Shift slide/fade animation toward the live shift state.
         # Dual-state keys (numbers/punctuation) use `shift_anim` (eased 0→1) to
@@ -1302,10 +1305,15 @@ class Screen:
 
             # Per-key press animation: on the CLICK rising edge start the
             # quick scale-down; on the release (falling) edge spring back.
+            # LATCHED modifiers (Shift/Ctrl/Alt toggled on-screen) are a held
+            # state, not a click — they keep the CLICK "held" color but never
+            # run the press-pop animation.
             pressed_now = input_state == state.InputState.CLICK
             key_id = (key.row, key.col)
             entry = self._press_anim.get(key_id)
-            if pressed_now and entry is None:
+            if kb_key.keycode in latched_mod_keys:
+                self._press_anim.pop(key_id, None)
+            elif pressed_now and entry is None:
                 self._press_anim[key_id] = [
                     1,
                     time.monotonic(),

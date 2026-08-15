@@ -20,10 +20,6 @@ games, and fullscreen apps alike.
 It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/SteamlessKeyboard)
 (originally from `archshift/triton`).
 
-<p align="center">
-  <img src="docs/preview.png" alt="DualTouch on-screen keyboard" width="90%">
-</p>
-
 ## Table of Contents
 
 - [Features](#features)
@@ -46,6 +42,10 @@ It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/S
 - **Sounds & haptics** — Steam's click sound and rumble feedback, both toggleable.
 - **Tray app** — battery status, open/close keyboard, autostart, chord selection, skin menu.
 - **Elevated by design** — runs elevated so it can type into Big Picture and UIPI-protected games.
+
+<p align="center">
+  <img src="docs/preview.png" alt="DualTouch on-screen keyboard" width="90%">
+</p>
 
 ## Requirements
 

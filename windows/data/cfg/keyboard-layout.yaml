@@ -85,7 +85,7 @@ keys:
   - {label: "Select", behavior: select, keycode: KEY_SELECT, width_weight: 2.0, modifier: true, align: right, valign: bottom, outline_opacity: 0.33}
 
 - - {label: "Ctrl", behavior: ctrl, keycode: KEY_LEFTCTRL, width_weight: 1.2, modifier: true, align: left, valign: bottom}
-  - {label: "Alt", keycode: KEY_LEFTALT, width_weight: 1.1, modifier: true, align: left, valign: bottom}
+  - {label: "Alt", behavior: alt, keycode: KEY_LEFTALT, width_weight: 1.1, modifier: true, align: left, valign: bottom}
   - {label: "Win", keycode: KEY_LEFTWIN, width_weight: 1.1, modifier: true, align: left, valign: bottom}
   - {label: "Space", keycode: KEY_SPACE, width_weight: 4.5, glyph: glyph_y.png}
   - {label: "◀", keycode: KEY_LEFT, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}

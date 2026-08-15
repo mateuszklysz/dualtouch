@@ -403,6 +403,20 @@ def tap_keycode(keycode):
     kb.releaseEvent([keycode])
 
 
+def _modifier_highlights():
+    """Keycode set of every LATELY-latched modifier, so toggling one on or off
+    keeps the others' on-screen highlight. A toggle must never clear the whole
+    set (unlatching Shift must not un-highlight a latched Ctrl/Alt)."""
+    keys = set()
+    if state.is_shift_latched():
+        keys.update((sui.Keys.KEY_LEFTSHIFT, sui.Keys.KEY_RIGHTSHIFT))
+    if state.is_ctrl_latched():
+        keys.update((sui.Keys.KEY_LEFTCTRL, sui.Keys.KEY_RIGHTCTRL))
+    if state.is_alt_latched():
+        keys.update((sui.Keys.KEY_LEFTALT, sui.Keys.KEY_RIGHTALT))
+    return keys
+
+
 def toggle_shift():
     """Flip the latched-Shift state. Unlike the controller's L2 (held only while
     the trigger is down), the mouse/keyboard path latches Shift so it stays on
@@ -418,12 +432,9 @@ def toggle_shift():
     state.set_shift_latched(new)
     if new:
         kb.pressEvent([sui.Keys.KEY_LEFTSHIFT])
-        state.set_highlighted(
-            {sui.Keys.KEY_LEFTSHIFT, sui.Keys.KEY_RIGHTSHIFT}
-        )
     else:
         kb.releaseEvent([sui.Keys.KEY_LEFTSHIFT])
-        state.set_highlighted(set())
+    state.set_highlighted(_modifier_highlights())
     state.set_shift_held(new)
 
 
@@ -466,10 +477,9 @@ def toggle_ctrl():
     state.set_ctrl_latched(new)
     if new:
         kb.pressEvent([sui.Keys.KEY_LEFTCTRL])
-        state.set_highlighted({sui.Keys.KEY_LEFTCTRL, sui.Keys.KEY_RIGHTCTRL})
     else:
         kb.releaseEvent([sui.Keys.KEY_LEFTCTRL])
-        state.set_highlighted(set())
+    state.set_highlighted(_modifier_highlights())
 
 
 def on_key_ctrl(virtual_kb, keycode):
@@ -478,12 +488,39 @@ def on_key_ctrl(virtual_kb, keycode):
     toggle_ctrl()
 
 
+def toggle_alt():
+    """Flip the latched-Alt state (mirror of toggle_ctrl). Holds real
+    KEY_LEFTALT on the OS while engaged so the next key press produces its
+    Alt+ combination (Alt+Tab, Alt+F4, ...), and paints the on-screen Alt
+    key blue while engaged. Decides on/off from our OWN latch flag."""
+    new = not state.is_alt_latched()
+    state.set_alt_latched(new)
+    if new:
+        kb.pressEvent([sui.Keys.KEY_LEFTALT])
+    else:
+        kb.releaseEvent([sui.Keys.KEY_LEFTALT])
+    state.set_highlighted(_modifier_highlights())
+
+
+def on_key_alt(virtual_kb, keycode):
+    # Clicking the on-screen Alt key toggles the latched Alt state.
+    toggle_alt()
+
+
 def release_ctrl():
     """Force-release the OS Ctrl key so hiding/closing the keyboard never
     leaves Ctrl stuck down (mirror of release_shift)."""
     kb.releaseEvent([sui.Keys.KEY_LEFTCTRL])
     kb.releaseEvent([sui.Keys.KEY_RIGHTCTRL])
     state.set_ctrl_latched(False)
+
+
+def release_alt():
+    """Force-release the OS Alt key so hiding/closing the keyboard never
+    leaves Alt stuck down (mirror of release_ctrl)."""
+    kb.releaseEvent([sui.Keys.KEY_LEFTALT])
+    kb.releaseEvent([sui.Keys.KEY_RIGHTALT])
+    state.set_alt_latched(False)
 
 
 def on_key_shift(virtual_kb, keycode):
@@ -577,6 +614,8 @@ class VirtualKeyboardConfig(config.ObjectConfig):
             return on_key_shift
         elif str == "ctrl":
             return on_key_ctrl
+        elif str == "alt":
+            return on_key_alt
         elif str == "paste":
             return on_key_paste
         elif str == "emoji":

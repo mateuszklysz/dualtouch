@@ -754,6 +754,7 @@ def main(cached_screen=None, on_close=None):
                 # Don't leave a mouse-latched Shift stuck down on the OS.
                 vkb.release_shift()
                 vkb.release_ctrl()
+                vkb.release_alt()
                 if state.is_osk_always_visible():
                     # Park the window off-screen instead of hiding it: hiding
                     # would force a ShowWindow transition (and its
@@ -1083,6 +1084,7 @@ def main(cached_screen=None, on_close=None):
         # never leaves the OS with KEY_LEFTSHIFT held.
         vkb.release_shift()
         vkb.release_ctrl()
+        vkb.release_alt()
         # Steam keyboard close chime (deck_ui_hide_modal.wav). Fired HERE, before
         # sc_thread.join, so it plays while the OSK is still visible and the
         # main-thread hook is registered. Gated by the key-sound setting in

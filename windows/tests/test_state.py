@@ -132,6 +132,17 @@ def test_ctrl_latch_roundtrip_and_reset():
     assert state.is_ctrl_latched() is False
 
 
+def test_alt_latch_roundtrip_and_reset():
+    state.reset_session()
+    assert state.is_alt_latched() is False
+    state.set_alt_latched(True)
+    assert state.is_alt_latched() is True
+    assert "KEY_LEFTALT" in state.get_latched_modifier_keys()
+    state.reset_session()
+    assert state.is_alt_latched() is False
+    assert state.get_latched_modifier_keys() == set()
+
+
 def test_cursor_used_only_after_navigation():
     """The DPAD/stick cursor highlight must not appear from its default until
     the user actually navigates with the stick/DPAD (touchpad-only users must

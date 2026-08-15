@@ -27,6 +27,8 @@ _shift_latch_lock = Lock()
 # of truth for whether real KEY_LEFTCTRL is held on the OS).
 _ctrl_latched = False
 _ctrl_latch_lock = Lock()
+_alt_latched = False
+_alt_latch_lock = Lock()
 
 # Set of keycode strings (e.g. "KEY_BACKSPACE") that should render in the
 # CLICK (blue) state, e.g. while their corresponding controller button is held.
@@ -386,6 +388,7 @@ def reset_session():
         _shift_held, \
         _shift_latched, \
         _ctrl_latched, \
+        _alt_latched, \
         _highlighted
     global _highlighted_sorted
     global _select_active
@@ -408,6 +411,8 @@ def reset_session():
         _shift_latched = False
     with _ctrl_latch_lock:
         _ctrl_latched = False
+    with _alt_latch_lock:
+        _alt_latched = False
     with _highlight_lock:
         _highlighted = set()
         _highlighted_sorted = ()
@@ -525,6 +530,31 @@ def set_ctrl_latched(value):
     global _ctrl_latched
     with _ctrl_latch_lock:
         _ctrl_latched = bool(value)
+
+
+def is_alt_latched():
+    with _alt_latch_lock:
+        return _alt_latched
+
+
+def set_alt_latched(value):
+    global _alt_latched
+    with _alt_latch_lock:
+        _alt_latched = bool(value)
+
+
+def get_latched_modifier_keys():
+    """Keycode strings (e.g. "KEY_LEFTSHIFT") of the modifiers currently
+    LATCHED via the on-screen toggle. Used by the renderer to show them as a
+    stable "held" highlight instead of a click (no press animation)."""
+    keys = set()
+    if is_shift_latched():
+        keys.update({"KEY_LEFTSHIFT", "KEY_RIGHTSHIFT"})
+    if is_ctrl_latched():
+        keys.update({"KEY_LEFTCTRL", "KEY_RIGHTCTRL"})
+    if is_alt_latched():
+        keys.update({"KEY_LEFTALT", "KEY_RIGHTALT"})
+    return keys
 
 
 def is_caps_on():
