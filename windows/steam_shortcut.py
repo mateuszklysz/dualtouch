@@ -831,6 +831,11 @@ _CHORD_CONFIG_SUBDIR = os.path.join(
 )
 _CHORD_APPID_DIR = "443510"  # Steam's Guide Button Chord config appid
 _CHORD_FILENAME = "controller_triton.vdf"
+# Steam's shipped chord template, used to create the per-user config on PCs
+# where Steam never autosaved one (a fresh install falls back to this file).
+_CHORD_BASE_TEMPLATE = os.path.join(
+    "controller_base", "chord_triton.vdf"
+)
 
 # Guide-chord button slot name -> Steam input key in the four_buttons group.
 _CHORD_SLOTS = {
@@ -1079,7 +1084,10 @@ def _restore_chord_slot(path, slot, original, backup=None, expected_sha=None):
         return False
     rng = _slot_activators_range(text, slot)
     if rng is None:
-        return False
+        # The slot is absent from the current config — there is no blocked
+        # binding left to undo (Steam's base template has no button_a). The
+        # previous block is already gone; treat the restore as done.
+        return True
     act_start, act_end, block_start, block_end = rng
 
     restored = _trusted_chord_activators(
@@ -1123,6 +1131,138 @@ def _restore_chord_slot(path, slot, original, backup=None, expected_sha=None):
     return True
 
 
+def _insert_chord_slot(text, slot):
+    """Insert a face-button input block carrying the dead binding into a chord
+    config that has no such slot at all (Steam's base template lacks button_a).
+    The block is anchored on an existing face-button slot to find the
+    four_buttons group's `inputs` dict. Returns the new text, or None when the
+    anchor or the inputs brace can't be located."""
+    if f'"{slot}"' in text:
+        return text
+    for anchor in _CHORD_SLOTS.values():
+        rng = _slot_activators_range(text, anchor)
+        if rng is None:
+            continue
+        block_start = rng[2]
+        inp = text.rfind('"inputs"', 0, block_start)
+        if inp < 0:
+            return None
+        brace = text.find("{", inp)
+        if brace < 0 or brace > block_start:
+            return None
+        at = brace + 1
+        if text[at : at + 1] != "\n":
+            return None
+        block = (
+            "\n"
+            '\t\t\t"{slot}"\n'
+            "\t\t\t{{\n"
+            '\t\t\t\t"activators"\n'
+            "\t\t\t\t{{\n"
+            '\t\t\t\t\t"Full_Press"\n'
+            "\t\t\t\t\t{{\n"
+            '\t\t\t\t\t\t"bindings"\n'
+            "\t\t\t\t\t\t{{\n"
+            '\t\t\t\t\t\t\t"binding"\t\t"controller_action empty_binding"\n'
+            "\t\t\t\t\t\t}}\n"
+            "\t\t\t\t\t}}\n"
+            "\t\t\t\t}}\n"
+            "\t\t\t}}".format(slot=slot)
+        )
+        return text[:at] + block + text[at:]
+    return None
+
+
+def _ensure_chord_config(steam_path, path, slot):
+    """Make sure Steam's per-user guide-chord config exists AND has a patchable
+    slot for `slot`. Steam does not always create the per-user file: a fresh
+    PC falls back to the shipped base template, which left `block_open_chord`
+    with nothing to patch (silently failing to suppress the Steam menu).
+
+    When the file is missing, this creates it from Steam's base template with
+    the autosave header (progenitor/url) Steam itself writes for per-user
+    configs. When the config (created or existing) has no slot for `slot` —
+    the base template has no button_a — a dead-binding slot is inserted, with
+    a backup taken first when the file is Steam's own. Returns True when the
+    file is ready to patch, False on any failure."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        created = False
+        modified = False
+    except OSError:
+        base = os.path.join(steam_path, _CHORD_BASE_TEMPLATE)
+        try:
+            with open(base, encoding="utf-8") as f:
+                text = f.read()
+        except OSError as e:
+            _log(f"guide chord: base template unreadable ({e!r})")
+            return False
+        if not _braces_balanced(text):
+            _log("guide chord: base template unbalanced — refusing to copy")
+            return False
+        # The header Steam writes for autosaved per-user configs. The load
+        # path ignores url/progenitor (Steam reads the file by path), but the
+        # controller UI displays them.
+        marker = '"creator"'
+        idx = text.find(marker)
+        if idx < 0:
+            _log("guide chord: base template malformed (no creator line)")
+            return False
+        nl = text.find("\n", idx)
+        header = (
+            "\t\"progenitor\"\t\t\"local://controller_base/chord_triton.vdf\"\n"
+            "\t\"url\"\t\t\"autosave://" + path + "\"\n"
+        )
+        text = text[: nl + 1] + header + text[nl + 1 :]
+        created = True
+        modified = True
+
+    # A slot must exist for _slot_activators_range/_write_chord_blocked to
+    # find it. The base template has no button_a — insert one with the dead
+    # binding, backing up first when the file is Steam's own (not ours).
+    if _slot_activators_range(text, slot) is None:
+        if not created:
+            try:
+                shutil.copy2(path, _chord_backup_path(path))
+            except OSError as e:
+                _log(f"guide chord: backup failed before slot insert ({e!r})")
+                return False
+        inserted = _insert_chord_slot(text, slot)
+        if inserted is None:
+            _log(f"guide chord: cannot add missing slot {slot}")
+            return False
+        text = inserted
+        modified = True
+
+    if not _braces_balanced(text):
+        _log("guide chord: unbalanced config — refusing to write")
+        return False
+
+    if modified:
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+                    f.write(text)
+                os.replace(tmp, path)
+            except Exception:
+                with suppress(OSError):
+                    os.unlink(tmp)
+                raise
+            if created:
+                _log(
+                    f"guide chord: created per-user config from base template -> {path}"
+                )
+            else:
+                _log(f"guide chord: inserted missing slot {slot} -> {path}")
+        except Exception as e:
+            _log(f"guide chord: create per-user config failed: {e!r}")
+            return False
+    return True
+
+
 def block_open_chord(steam_path=None, chord="X"):
     """Ensure Steam consumes the Guide Button Chord for `chord` (the DualTouch
     OSK-open chord) so it does NOT open Steam's menu on the same press. Writes
@@ -1137,10 +1277,18 @@ def block_open_chord(steam_path=None, chord="X"):
     if not steam_path or not os.path.isdir(steam_path):
         return True  # Steam not found — nothing to patch, app won't open OSK anyway
     path = chord_config_path(steam_path)
-    if path is None or not os.path.isfile(path):
-        return True  # config missing — nothing to block (no-op)
-
+    if path is None:
+        return True  # unknown user — nothing to patch (no-op)
     slot = _CHORD_SLOTS[chord]
+
+    # Steam does not always create the per-user chord config: on a fresh PC
+    # it falls back to the shipped base template, which used to leave nothing
+    # to patch here (the Steam menu kept opening on the chord). Ensure the
+    # file exists — creating it from the base template when missing — so the
+    # dead binding can be written.
+    if not _ensure_chord_config(steam_path, path, slot):
+        return True  # unreadable/uncreatable — nothing we can block (no-op)
+
     state = load_state()
     prev = state.get("chord_blocked")
     prev_orig = state.get("chord_original")
