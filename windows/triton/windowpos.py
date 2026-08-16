@@ -2,7 +2,7 @@ import ctypes
 
 import sdl3w as S
 
-from triton import screen
+from triton import screen, state
 
 # Index into the 6-position window rotation, advanced by Shift+Move.
 # 0 starts at down-mid (the default open location).
@@ -55,7 +55,13 @@ def _apply_window_position(sdl_window, index=None, move=True):
 
 
 def _cycle_window_position(sdl_window):
-    _position_index[0] = (_position_index[0] + 1) % 6
+    if state.is_split_layout_enabled():
+        # The split window spans the full display width, so the left/right/mid
+        # spots collapse to the same x — the Move key alternates between DOWN
+        # (indices 0/1/5) and UP (2/3/4) only.
+        _position_index[0] = 0 if _position_index[0] not in (0, 1, 5) else 3
+    else:
+        _position_index[0] = (_position_index[0] + 1) % 6
     _apply_window_position(sdl_window)
 
 

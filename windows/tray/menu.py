@@ -60,10 +60,16 @@ def build_menu(app):
     )
 
     # Steam on-screen-keyboard skins (radio; applied on the next OSK open).
-    # The "Size" and "Transparent" submenus sit at the top, above the skin list.
+    # The "Size", "Transparent" and "Split Keyboard" items sit at the top,
+    # above the skin list.
     skin_submenu = pystray.Menu(
         pystray.MenuItem("Size", size_submenu),
         pystray.MenuItem("Transparent", transparent_submenu),
+        pystray.MenuItem(
+            "Split Keyboard",
+            app.toggle_split_layout,
+            checked=app.is_split_layout_checked,
+        ),
         pystray.Menu.SEPARATOR,
         *[
             pystray.MenuItem(

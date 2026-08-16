@@ -85,6 +85,7 @@ menus), or by hand-editing `settings.json` for finer control.
 | `skin` | `"Gruvbox"` | Keyboard skin: Steam OSK themes load from the Steam install; Gruvbox is the bundled original |
 | `osk_size` | `"medium"` | `"small"`/`"medium"`/`"full"` |
 | `osk_transparency` | `"off"` | `"off"`/`"low"`/`"medium"`/`"high"` |
+| `osk_split_layout` | `false` | Split the keyboard into left/right halves with a middle gap; each touchpad covers its own half |
 | `key_sound_enabled_sc` | `true` | Steam keyboard click sound |
 | `rumble_enabled_sc` | `true` | Haptics on key clicks and trigger pulls |
 | `steam_kbd_layer` | `true` | Dispatch the `forceinputappid` keyboard layer while open |

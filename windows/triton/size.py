@@ -54,3 +54,21 @@ def _compute_size(name):
             return bounds.w, int(round(_BASE_HEIGHT * scale))
         return _BASE_WIDTH, _BASE_HEIGHT
     return (int(round(_BASE_WIDTH * scale)), int(round(_BASE_HEIGHT * scale)))
+
+
+def _compute_split_size(name):
+    """Split-layout OSK size: the window spans the primary display's usable
+    width edge-to-edge so both halves sit at the screen corners (the middle
+    gap is rendered transparent, showing the desktop). The height follows the
+    size submenu ("small" scales it down; "full"/"medium" share the scaled
+    default height) — only the width changes in split mode."""
+    scale = _display_scale()
+    if name == "small":
+        height = int(round(_BASE_HEIGHT * _SMALL_SCALE * scale))
+    else:
+        height = int(round(_BASE_HEIGHT * scale))
+    bounds = S.SDL_Rect()
+    disp = S.SDL_GetPrimaryDisplay()
+    if disp and S.SDL_GetDisplayUsableBounds(disp, ctypes.byref(bounds)):
+        return bounds.w, height
+    return int(round(_BASE_WIDTH * scale)), height

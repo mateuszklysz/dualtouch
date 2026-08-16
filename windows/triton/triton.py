@@ -79,12 +79,13 @@ _OPEN_ANIM_DROP_PX = 35
 _OPEN_ANIM_ZETA = 0.70
 _OPEN_ANIM_OMEGA0 = 20.0
 
-# OSK CLOSE animation: a quick spring reverse (fade 1->0 + slight scale-down +
-# a short downward slide), over _CLOSE_ANIM_SECS. Research: closes are faster
-# and snappier than opens, and should NOT bounce (an overshooting exit reads as
-# a glitch). The scale/fade follow a single eased curve; the slide is linear.
+# OSK CLOSE animation: a quick spring reverse (fade 1->0 + slight scale-down),
+# over _CLOSE_ANIM_SECS. Research: closes are faster and snappier than opens,
+# and should NOT bounce (an overshooting exit reads as a glitch). The scale and
+# fade follow a single eased curve. NO window movement during the close: moving
+# the layered per-pixel-alpha window mid-fade makes DWM re-composite stale
+# opaque content, which showed up as a flash on the bottom at the end.
 _CLOSE_ANIM_SECS = 0.16
-_CLOSE_ANIM_SLIDE_PX = 16
 
 
 # Parking spot for the always-visible OSK window while "closed" (must match
@@ -444,6 +445,10 @@ def main(cached_screen=None, on_close=None):
     # once at startup and never re-published mid-process, so it's static per
     # OSK session — cache it instead of a lock read every visible iteration.
     stick_nav_enabled = state.is_sc_kbd_stick_nav_enabled()
+    # Split layout (tray "Steam Controller -> Split Keyboard") is published
+    # live; the loop watches it and re-derives key geometry on change (see the
+    # update_dimensions gate below).
+    split_layout_was = state.is_split_layout_enabled()
 
     while not state.should_close():
         now = time.monotonic()
@@ -807,6 +812,22 @@ def main(cached_screen=None, on_close=None):
             # per-iteration call was rebuilding ~90 identical key widths.
             if scr._resize_dirty:
                 virtual_kb.update_dimensions()
+            # Split layout toggled live from the tray: the window itself must
+            # change width (split = full display width, plain = the size
+            # submenu), so recompute the module dims, resize the SDL window,
+            # re-settle it at its position spot, and re-derive the key
+            # geometry. Same cache invalidation + render gate as a resize.
+            if state.is_split_layout_enabled() != split_layout_was:
+                split_layout_was = state.is_split_layout_enabled()
+                w, h = screen.resize_for_layout()
+                S.SDL_SetWindowSize(scr.window, w, h)
+                _apply_window_position(scr.window)
+                # The open/close animation renders to a cached offscreen
+                # texture sized for the old dimensions — drop it so the next
+                # anim target is built at the new size.
+                scr._anim_target = None
+                virtual_kb.update_dimensions()
+                scr._resize_dirty = True
             # --- Input-driven work runs EVERY loop iteration (NOT gated by the
             # render rate), so cursor steps and key presses drain at low latency
             # (the SC's frames go straight to the input thread).
@@ -1014,27 +1035,15 @@ def main(cached_screen=None, on_close=None):
         # is throttled separately above.
         time.sleep(_LOOP_SLEEP)
 
-    # --- OSK CLOSE animation: quick spring reverse (fade + scale + slide) ---
+    # --- OSK CLOSE animation: quick spring reverse (fade + scale) ---
     # Played while the window is still visible, right before the hide/park in
     # the teardown. Fades the keyboard out over _CLOSE_ANIM_SECS with a gentle
-    # scale-down and a short downward slide, so closing feels as polished as
-    # opening. Falls back to an instant hide if the animation can't render.
+    # scale-down, so closing feels as polished as opening. Falls back to an
+    # instant hide if the animation can't render. The window is NOT moved
+    # during the close (see the _CLOSE_ANIM_SECS comment).
     if scr.render_close_anim(
         virtual_kb, controller_state.get_pointers(), 1.0, 1.0
     ):
-        # The close animation must slide the window from WHERE IT ACTUALLY IS
-        # now — not from the resting spot it opened at. A Move (or a jump)
-        # repositions the window during the session, and SDL_GetWindowPosition
-        # gives us the true current spot; open_anim_rest would be stale (the
-        # bug: closing after a Move animated at the old spot and snapped
-        # back to it).
-        _close_xy = None
-        _px = ctypes.c_int()
-        _py = ctypes.c_int()
-        if S.SDL_GetWindowPosition(
-            scr.window, ctypes.byref(_px), ctypes.byref(_py)
-        ):
-            _close_xy = (int(_px.value), int(_py.value))
         _close_anim_start = time.monotonic()
         _close_next = _close_anim_start
         while True:
@@ -1042,15 +1051,10 @@ def main(cached_screen=None, on_close=None):
             _p = (_now - _close_anim_start) / _CLOSE_ANIM_SECS
             if _p >= 1.0:
                 break
-            # Single eased curve drives fade + scale; the slide is linear.
+            # One eased curve drives fade + scale ("recede into the plate").
             _e = _p * _p * (3.0 - 2.0 * _p)  # smoothstep
             _fade = 1.0 - _e
             _scale = 1.0 - 0.08 * _e
-            _slide = _CLOSE_ANIM_SLIDE_PX * _p
-            if _close_xy is not None:
-                S.SDL_SetWindowPosition(
-                    scr.window, _close_xy[0], int(round(_close_xy[1] + _slide))
-                )
             scr.render_close_anim(
                 virtual_kb, controller_state.get_pointers(), _fade, _scale
             )
@@ -1060,10 +1064,12 @@ def main(cached_screen=None, on_close=None):
             _sleep = _close_next - time.monotonic()
             if _sleep > 0:
                 time.sleep(_sleep)
-        # Snap back to the current spot so the hide/park below parks the
-        # window where the user last left it (Move-remembered position).
-        if _close_xy is not None:
-            S.SDL_SetWindowPosition(scr.window, _close_xy[0], _close_xy[1])
+        # Commit one fully-transparent frame so the hide/park below moves an
+        # already alpha-0 window (a moved opaque-backed layered window would
+        # flash during DWM re-composite).
+        scr.render_close_anim(
+            virtual_kb, controller_state.get_pointers(), 0.0, 0.92
+        )
 
     try:
         # Fire the close callback BEFORE the teardown below: the tray's

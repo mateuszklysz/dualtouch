@@ -180,3 +180,86 @@ def test_75pct_layout_has_function_row_and_nav_cluster():
     # Home/End repeat when held (like a real board); Ins does not need to.
     assert vkb.is_repeatable(fn_by_code["KEY_HOME"])
     assert vkb.is_repeatable(fn_by_code["KEY_END"])
+
+
+def test_split_layout_splits_rows_into_two_halves_with_gap():
+    """Split layout (tray "Steam Controller -> Split Keyboard") must lay each
+    row out as TWO halves — the left half starting at the left edge, the right
+    half pushed against the right edge — with an empty middle gap. Guards the
+    _row_key_positions split math: every key lands in one half, the two halves
+    never overlap, and hit-testing still resolves both halves."""
+    import triton.screen as screen
+    from triton import state
+
+    state.reset_session()
+    state.set_split_layout(True)
+    try:
+        kb_config = vkb.VirtualKeyboardConfig()
+        layout = config.YamlFile("keyboard-layout.yaml")
+        layout.read()
+        layout.add_to_config("keys", kb_config)
+        kb = kb_config.construct()
+
+        # Split mode runs the window at full display width (the halves are
+        # sized from the plain keyboard width, so keys keep their size and the
+        # display's extra width becomes the transparent middle gap).
+        screen.width, screen.height = 2560, 369
+        kb.update_dimensions()
+
+        layouts = list(kb.gen_key_layouts())
+        assert layouts, "split layout must still produce keys"
+        # Every key stays inside the window.
+        for lay in layouts:
+            assert lay.x >= 0 and lay.x + lay.w <= screen.width
+
+        # Each row splits into exactly two halves with a real middle gap.
+        gap = kb.split_gap_px()
+        assert gap > 0
+        # All rows share ONE gap x-position (the fixed center band), so the
+        # transparent middle is a clean vertical strip the renderer can clear.
+        band = kb.split_gap_band()
+        assert band is not None
+        band_left, band_right = band
+        for i_row in range(kb.key_rows):
+            row_lays = [l for l in layouts if l.row == i_row]
+            if len(row_lays) < 2:
+                continue
+            split_idx = kb._split_index(i_row)
+            left = [l for l in row_lays if l.col < split_idx]
+            right = [l for l in row_lays if l.col >= split_idx]
+            assert left and right, "split layout must leave keys on both sides"
+            # Left half hugs the left edge; right half hugs the right edge.
+            assert left[0].x <= screen.width // 2
+            assert right[-1].x + right[-1].w >= screen.width // 2
+            # No left key crosses into the right half and vice versa (the
+            # halves may each reach past center when a wide key like Space
+            # dominates its side — the gap between them is the invariant).
+            left_max = max(l.x + l.w for l in left)
+            right_min = min(l.x for l in right)
+            assert left_max < right_min
+            # Every row's gap sits on the SAME band (rounding-tolerant: each
+            # key's width is rounded, so error grows with key count), which is
+            # what makes the middle a uniform transparent strip.
+            tol = len(row_lays) // 2 + 2
+            assert abs(left_max - band_left) <= tol
+            assert abs(right_min - band_right) <= tol
+        # The halves of every row are separated by a real (px) gap.
+        for i_row in range(kb.key_rows):
+            row_lays = [l for l in layouts if l.row == i_row]
+            if len(row_lays) < 2:
+                continue
+            split_idx = kb._split_index(i_row)
+            left_max = max(l.x + l.w for l in row_lays if l.col < split_idx)
+            right_min = min(l.x for l in row_lays if l.col >= split_idx)
+            assert right_min - left_max >= gap - 4  # rounding-tolerant
+
+        # Hit-testing: a click on the left half finds a LEFT-half key, a
+        # click on the right half finds a RIGHT-half key.
+        mid_y = kb.padding_outer + kb.key_height // 2
+        left_hit = kb.find_key_rc(screen.width // 4, mid_y)
+        right_hit = kb.find_key_rc(3 * screen.width // 4, mid_y)
+        assert left_hit is not None and right_hit is not None
+        assert left_hit[1] < kb._split_index(left_hit[0])
+        assert right_hit[1] >= kb._split_index(right_hit[0])
+    finally:
+        state.set_split_layout(False)

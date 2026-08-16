@@ -21,7 +21,7 @@ from triton.fonts import (
 # from triton.screen (the class lives in triton.geometry).
 from triton.geometry import CoordFraction as CoordFraction
 from triton.geometry import set_dims
-from triton.size import _BASE_HEIGHT, _compute_size
+from triton.size import _BASE_HEIGHT, _compute_size, _compute_split_size
 
 width = 1286
 height = 369
@@ -54,6 +54,20 @@ def set_osk_size(name):
 
 def get_osk_size():
     return _active_osk_size
+
+
+def resize_for_layout():
+    """Recompute width/height for the CURRENT split-layout setting + size
+    submenu, updating the module dims (read by CoordFraction and vkb's key
+    layout). Called at Screen construction and when the tray toggles split
+    layout live (the main loop then resizes the SDL window). Returns (w, h)."""
+    global width, height
+    if state.is_split_layout_enabled():
+        width, height = _compute_split_size(_active_osk_size)
+    else:
+        width, height = _compute_size(_active_osk_size)
+    set_dims(width, height)  # keep geometry.py in sync (CoordFraction reads it)
+    return width, height
 
 
 class Screen:
@@ -121,10 +135,7 @@ class Screen:
         # the same ratio so "Small"/"Full Screen" stay proportional to the
         # original 1286x369 "Default" look instead of just changing the grid.
         global width, height
-        width, height = _compute_size(_active_osk_size)
-        set_dims(
-            width, height
-        )  # keep geometry.py in sync (CoordFraction reads it)
+        width, height = resize_for_layout()
         # Mark the layout dirty: this construction may have changed the module
         # dims from whatever the VirtualKeyboard was built against (e.g. the
         # tray pre-warm failed and main() built a fresh Screen at a non-default
@@ -145,6 +156,10 @@ class Screen:
         # (e.g. a browser address bar / YouTube search field). "0" = do not
         # activate on show (the SDL3 successor to the old NO_ACTIVATION hint).
         S.SDL_SetHint(S.SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, b"0")
+        # Touchscreen support: let SDL synthesize mouse events from finger
+        # input (SDL3 defaults to touch-only events), so a touchscreen can
+        # point/type at the OSK exactly like a mouse.
+        S.SDL_SetHint(S.SDL_HINT_TOUCH_MOUSE_EVENTS, b"1")
 
         # Anchor the window to the bottom-center of the primary display's
         # usable area (i.e. above the taskbar).
@@ -498,6 +513,36 @@ class Screen:
             c = self.bg_color
             S.SDL_SetRenderDrawColor(self.renderer, c.r, c.g, c.b, 255)
         S.SDL_RenderClear(self.renderer)
+
+    def _render_split_background(self, virtual_kb):
+        """Split layout, opaque mode: erase everything to alpha 0 and repaint
+        ONLY the two keyboard halves — the middle gap stays fully transparent
+        so the desktop shows through the band (the "no black in between" split
+        look) instead of the window's opaque fill. Transparent mode already
+        erases everywhere, so this is a no-op there (the halves keep their
+        translucent key fills)."""
+        band = virtual_kb.split_gap_band()
+        if band is None:
+            return
+        left_x, right_x = band
+        c = self.bg_color
+        S.SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 0)
+        S.SDL_RenderClear(self.renderer)
+        S.SDL_SetRenderDrawColor(self.renderer, c.r, c.g, c.b, 255)
+        S.SDL_RenderFillRect(
+            self.renderer,
+            ctypes.byref(
+                S.SDL_FRect(0.0, 0.0, float(left_x), float(height))
+            ),
+        )
+        S.SDL_RenderFillRect(
+            self.renderer,
+            ctypes.byref(
+                S.SDL_FRect(
+                    float(right_x), 0.0, float(width - right_x), float(height)
+                )
+            ),
+        )
 
     # Glyph cache target size. Source PNGs are 128–240 px but get drawn at
     # ~30–50 px on screen — an 8× one-step GPU downscale aliases hard even
@@ -1540,6 +1585,10 @@ class Screen:
 
     def render(self, virtual_kb, pointers):
         self.clear()
+        if not self._transparent:
+            # Split layout: repaint only the two halves so the middle gap stays
+            # transparent (opaque mode already filled the whole window).
+            self._render_split_background(virtual_kb)
         self.render_vkb(virtual_kb, pointers)
         self._render_diacritic_row()
         # Only show the finger circles while the trackpad is actually being
@@ -1599,6 +1648,8 @@ class Screen:
         # 1) Keyboard -> offscreen texture, full opacity, normal appearance.
         S.SDL_SetRenderTarget(self.renderer, tex)
         self.clear()
+        if not self._transparent:
+            self._render_split_background(virtual_kb)
         # The animation runs without a content_changed this frame, so the caps
         # cache may be stale — force render_vkb to read it fresh.
         self._caps_on = None
@@ -1650,6 +1701,8 @@ class Screen:
             return False
         S.SDL_SetRenderTarget(self.renderer, tex)
         self.clear()
+        if not self._transparent:
+            self._render_split_background(virtual_kb)
         # Same as render_open_anim: no content_changed this frame, so force a
         # fresh caps read inside render_vkb.
         self._caps_on = None

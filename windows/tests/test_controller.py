@@ -34,6 +34,22 @@ def test_adjust_raw_never_returns_outside_window():
         assert 0 <= controller.adjust_raw_y(ry, 1 / 2) <= screen.height
 
 
+def test_adjust_raw_x_span_maps_full_int16_range():
+    """Split-layout pad span mapping: the touchpad raw X is the HID report's
+    int16 (±0x8000), so the pad's whole travel must land in its band. (The
+    old ±0x20000 scale squeezed every pad into the middle 25% of its span,
+    leaving the outer keys unreachable.)"""
+    screen.width, screen.height = 2560, 369
+    assert controller.adjust_raw_x_span(-0x8000, 0, 730) == 0
+    assert controller.adjust_raw_x_span(0, 0, 730) == 365
+    assert controller.adjust_raw_x_span(0x7FFF, 0, 730) == 730
+    assert controller.adjust_raw_x_span(-0x8000, 1830, 2560) == 1830
+    assert controller.adjust_raw_x_span(0, 1830, 2560) == 2195
+    assert controller.adjust_raw_x_span(0x7FFF, 1830, 2560) == 2560
+    assert controller.adjust_raw_x_span(-0x10000, 0, 730) == 0  # clamped
+    assert controller.adjust_raw_x_span(0x10000, 1830, 2560) == 2560
+
+
 """Headless tests for the Select key (iOS hold-space text selection)."""
 
 
