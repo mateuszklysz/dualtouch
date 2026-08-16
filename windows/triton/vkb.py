@@ -4,6 +4,7 @@ import steamcontroller.uinput as sui
 
 from triton import config, diacritics, screen, state, utils
 from triton.color import Color
+from triton.size import _compute_size
 
 kb = sui.Keyboard()
 
@@ -94,6 +95,7 @@ class VirtualKeyboard:
         unpadded_width = (
             screen.width
             - self.padding_outer * 2
+            - self.split_gap_px()
             - (len(self.keys[row]) * self.padding_inner * 2)
         )
         weights_total = 0
@@ -101,6 +103,135 @@ class VirtualKeyboard:
             weights_total += key.width_weight
 
         return unpadded_width / weights_total
+
+    def split_gap_px(self):
+        """Middle-gap width (px) when split layout is on: a fraction of the
+        window so "full" displays get a proportionally larger gap."""
+        if not state.is_split_layout_enabled():
+            return 0
+        return round(screen.width * self.SPLIT_GAP_FRACTION)
+
+    def _split_index(self, i_row):
+        """Column where `i_row` splits into left/right halves in split layout:
+        the column whose width_weight sum leaves the two halves most evenly
+        balanced. The halves occupy equal-width fixed regions (see split_x), so
+        balancing the key WEIGHTS gives the most natural split. At least one
+        key lands on each side."""
+        row = self.keys[i_row]
+        n = len(row)
+        if n < 2:
+            return n
+        total = sum(k.width_weight for k in row)
+        best_i, best_diff = 1, None
+        left = row[0].width_weight
+        for i in range(1, n):
+            diff = abs(left - (total - left))
+            if best_diff is None or diff < best_diff:
+                best_i, best_diff = i, diff
+            left += row[i].width_weight
+        return best_i
+
+    def _split_ref_width(self):
+        """Non-split keyboard width (px) for the CURRENT size submenu — the
+        reference each split half is sized against. Sizing the halves from the
+        plain-mode width (instead of from half the display) keeps split keys at
+        the same size the user picked; the display's extra width becomes
+        transparent middle gap."""
+        return _compute_size(screen.get_osk_size())[0]
+
+    def _split_region(self):
+        """Usable width (px) of each split half in split layout, 0 when off.
+        The halves are anchored to the window edges but sized from the
+        non-split keyboard width (see _split_ref_width), so keys keep their
+        normal size and the middle of a wide display stays transparent."""
+        if not state.is_split_layout_enabled():
+            return 0
+        ref_w = self._split_ref_width()
+        gap = round(ref_w * self.SPLIT_GAP_FRACTION)
+        return (ref_w - gap) / 2 - self.padding_outer
+
+    def split_gap_band(self):
+        """(left, right) x-bounds of the transparent middle band in split
+        layout, or None when off. Used by the renderer to clear the gap to
+        alpha 0 (the desktop shows through, "no black in between") while the
+        two halves stay opaque, and by the controller to map each pad onto its
+        own half's key span."""
+        if not state.is_split_layout_enabled():
+            return None
+        region = self._split_region()
+        return (
+            self.padding_outer + region,
+            screen.width - self.padding_outer - region,
+        )
+
+    def _half_key_widths(self, i_row):
+        """(left, right) per-key base widths (px per width_weight unit) for
+        `i_row` in split layout: each half is sized independently against its
+        own fixed-width region (either side of the gap band), so rows with
+        different key counts still keep both halves symmetric around the ONE
+        middle band. Plain layout returns the shared row width twice."""
+        if not state.is_split_layout_enabled():
+            kw = self.key_width[i_row]
+            return kw, kw
+        split_idx = self._split_index(i_row)
+        row = self.keys[i_row]
+        left = row[:split_idx]
+        right = row[split_idx:]
+        region = self._split_region()
+        left_unpadded = region - len(left) * self.padding_inner * 2
+        right_unpadded = region - len(right) * self.padding_inner * 2
+        return (
+            left_unpadded / sum(k.width_weight for k in left),
+            right_unpadded / sum(k.width_weight for k in right),
+        )
+
+    def _key_unit_width(self, i_row, col):
+        """Per-key base width (px per width_weight unit) at (i_row, col): the
+        shared row width in plain layout, the key's own HALF's width in split
+        layout — so find_key, find_key_rc and the render iteration all agree
+        with _row_key_positions."""
+        if not state.is_split_layout_enabled():
+            return self.key_width[i_row]
+        if col < self._split_index(i_row):
+            return self._left_key_width[i_row]
+        return self._right_key_width[i_row]
+
+    def _row_key_positions(self, i_row):
+        """Yield (col, x_start) for every key of `i_row` in visual left-to-right
+        order. Split layout splits the row into two halves around the middle
+        gap: the left half runs from the left edge to split_x(), the right
+        half from split_x() + gap to the right edge (each half sizes its own
+        keys, so all rows share ONE gap x-position — see split_gap_band); the
+        plain layout is one contiguous run. Single source of truth for the
+        render iteration, find_key, and find_key_rc, so the two halves stay in
+        sync."""
+        row = self.keys[i_row]
+        if state.is_split_layout_enabled():
+            split_idx = self._split_index(i_row)
+            x = self.padding_outer
+            for i, key in enumerate(row[:split_idx]):
+                yield i, x
+                x += (
+                    key.width_weight * self._left_key_width[i_row]
+                    + self.padding_inner * 2
+                )
+            band = self.split_gap_band()
+            assert band is not None  # split mode is on (guard above)
+            x = band[1]
+            for i, key in enumerate(row[split_idx:], start=split_idx):
+                yield i, x
+                x += (
+                    key.width_weight * self._right_key_width[i_row]
+                    + self.padding_inner * 2
+                )
+        else:
+            x = self.padding_outer
+            for i, key in enumerate(row):
+                yield i, x
+                x += (
+                    key.width_weight * self.key_width[i_row]
+                    + self.padding_inner * 2
+                )
 
     def _uniform_key_height(self):
         return (
@@ -112,8 +243,13 @@ class VirtualKeyboard:
     def update_dimensions(self):
         self.key_height = self._uniform_key_height()
         self.key_width = []
+        self._left_key_width = []
+        self._right_key_width = []
         for i in range(0, self.key_rows):
             self.key_width.append(self._uniform_key_width(i))
+            lw, rw = self._half_key_widths(i)
+            self._left_key_width.append(lw)
+            self._right_key_width.append(rw)
         self._layouts_cache = None
 
     def find_key_row(self, y_coord):
@@ -125,13 +261,15 @@ class VirtualKeyboard:
     def find_key(self, x_coord, y_coord):
         i_row = self.find_key_row(y_coord)
         i_row = utils.clamp(i_row, 0, self.key_rows - 1)
-
-        iterated_x = self.padding_outer
-        for key in self.keys[i_row]:
-            adjusted_key_width = key.width_weight * self.key_width[i_row]
-            iterated_x += adjusted_key_width + self.padding_inner * 2
-            if x_coord < iterated_x:
-                return key
+        row = self.keys[i_row]
+        for i, x_start in self._row_key_positions(i_row):
+            x_end = (
+                x_start
+                + row[i].width_weight * self._key_unit_width(i_row, i)
+                + self.padding_inner * 2
+            )
+            if x_coord < x_end:
+                return row[i]
         return None
 
     def find_key_rc(self, x_coord, y_coord):
@@ -139,15 +277,21 @@ class VirtualKeyboard:
         mouse handler to drive the same cursor/press path as the DPAD. Clamps
         to the nearest in-bounds cell so an edge click never misses."""
         i_row = utils.clamp(self.find_key_row(y_coord), 0, self.key_rows - 1)
-        iterated_x = self.padding_outer
-        for i_key, key in enumerate(self.keys[i_row]):
-            iterated_x += (
-                key.width_weight * self.key_width[i_row]
+        row = self.keys[i_row]
+        for i, x_start in self._row_key_positions(i_row):
+            x_end = (
+                x_start
+                + row[i].width_weight * self._key_unit_width(i_row, i)
                 + self.padding_inner * 2
             )
-            if x_coord < iterated_x:
-                return (i_row, i_key)
-        return (i_row, len(self.keys[i_row]) - 1)
+            if x_coord < x_end:
+                return (i_row, i)
+        return (i_row, len(row) - 1)
+
+    # Split layout: fraction of the window width left empty between the left
+    # and right keyboard halves. Sized relative to the window so "full" gets a
+    # proportionally larger gap.
+    SPLIT_GAP_FRACTION = 0.06
 
     # Hit-target expansion (px) added around every key when resolving a click
     # or hover position (see find_key_expanded). Keys sit ~6 px apart (the
@@ -253,12 +397,12 @@ class VirtualKeyboard:
         iterated_y = self.padding_outer
 
         for i_row, row in enumerate(self.keys):
-            iterated_x = self.padding_outer
-
-            for i_key, key in enumerate(row):
-                adj_x = iterated_x + self.padding_inner
+            for i_key, x_start in self._row_key_positions(i_row):
+                adj_x = x_start + self.padding_inner
                 adj_y = iterated_y + self.padding_inner
-                adj_w = key.width_weight * self.key_width[i_row]
+                adj_w = row[i_key].width_weight * self._key_unit_width(
+                    i_row, i_key
+                )
                 adj_h = self.key_height
 
                 yield self.KeyLayout(
@@ -269,8 +413,6 @@ class VirtualKeyboard:
                     i_row,
                     i_key,
                 )
-
-                iterated_x += adj_w + self.padding_inner * 2
             iterated_y += self.key_height + self.padding_inner * 2
 
 

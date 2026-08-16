@@ -945,6 +945,26 @@ def get_sc_osk_trigger_threshold():
         return _sc_osk_trigger_threshold
 
 
+# Split layout (settings.json "osk_split_layout", tray "Steam Controller ->
+# Split Keyboard"): split the keyboard into left/right halves with a middle
+# gap, each touchpad covering its own half. Published by the tray; read by
+# vkb (geometry) and controller.py (pad X mapping). Session-independent
+# config - deliberately NOT reset by reset_session().
+_split_layout = False
+_split_layout_lock = Lock()
+
+
+def set_split_layout(enabled):
+    global _split_layout
+    with _split_layout_lock:
+        _split_layout = bool(enabled)
+
+
+def is_split_layout_enabled():
+    with _split_layout_lock:
+        return _split_layout
+
+
 def key_sound_tick():
     """Fire the registered key-press sound hook on every dispatched key.
     Gated by the key-sound enabled flag; NOT silenced while Steam runs (see

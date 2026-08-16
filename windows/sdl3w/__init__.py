@@ -130,6 +130,7 @@ SDL_BUTTON_LMASK = 1 << (SDL_BUTTON_LEFT - 1)
 
 # Hints
 SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN = b"SDL_WINDOW_ACTIVATE_WHEN_SHOWN"
+SDL_HINT_TOUCH_MOUSE_EVENTS = b"SDL_TOUCH_MOUSE_EVENTS"
 
 
 # ===========================================================================
@@ -252,6 +253,12 @@ SDL_GetWindowPosition = _bind(
         ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_int),
     ],
+)
+SDL_SetWindowSize = _bind(
+    SDL,
+    "SDL_SetWindowSize",
+    ctypes.c_bool,
+    [ctypes.c_void_p, ctypes.c_int, ctypes.c_int],
 )
 SDL_ShowWindow = _bind(SDL, "SDL_ShowWindow", ctypes.c_bool, [ctypes.c_void_p])
 SDL_HideWindow = _bind(SDL, "SDL_HideWindow", ctypes.c_bool, [ctypes.c_void_p])

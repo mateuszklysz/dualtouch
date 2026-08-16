@@ -100,6 +100,22 @@ def adjust_raw_x(raw_x, center_fraction, scalar=6 / 5):
     return utils.round_to_int(utils.clamp(x, 0, screen.width))
 
 
+def adjust_raw_x_span(raw_x, span_start, span_end):
+    """Map the touchpad's raw X across the fixed screen interval
+    [span_start, span_end]. Split layout uses this so each pad covers exactly
+    its own half's key span — the left pad [0, band_left], the right pad
+    [band_right, width] — instead of half the (much wider) display, most of
+    which is transparent middle gap where no key lives. The raw X is the HID
+    int16 (±0x8000) from the report struct — normalized against the TRUE full
+    scale so the pad's whole travel lands in its band (a ±0x20000 scale would
+    squeeze every pad into the middle 25% of its span, making the outer keys
+    unreachable)."""
+    abs_max = 0x8000
+    frac = (raw_x + abs_max) / (2 * abs_max)
+    x = span_start + frac * (span_end - span_start)
+    return utils.round_to_int(utils.clamp(x, 0, screen.width))
+
+
 def adjust_raw_y(raw_y, center_fraction, scalar=6 / 5):
     """Map the touchpad's raw Y to a screen Y, clamped into the window (see
     adjust_raw_x). Without the clamp the top of the pad maps to y=-258 and the
@@ -804,14 +820,41 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
             self.sc_input_previous = pad_frame
             return
 
-        ptr_left_coords = CoordFraction.from_absolute(
-            adjust_raw_x(sc_input.lpad_x, 1 / 4),
-            adjust_raw_y(sc_input.lpad_y, 1 / 2),
-        )
-        ptr_right_coords = CoordFraction.from_absolute(
-            adjust_raw_x(sc_input.rpad_x, 3 / 4),
-            adjust_raw_y(sc_input.rpad_y, 1 / 2),
-        )
+        split = state.is_split_layout_enabled()
+        band = None
+        if split:
+            kb = state.get_virtual_kb()
+            if kb is not None:
+                band = kb.split_gap_band()
+        if band is not None:
+            band_left, band_right = band
+            ptr_left_coords = CoordFraction.from_absolute(
+                adjust_raw_x_span(sc_input.lpad_x, 0, band_left),
+                adjust_raw_y(sc_input.lpad_y, 1 / 2),
+            )
+            ptr_right_coords = CoordFraction.from_absolute(
+                adjust_raw_x_span(
+                    sc_input.rpad_x, band_right, screen.width
+                ),
+                adjust_raw_y(sc_input.rpad_y, 1 / 2),
+            )
+        else:
+            ptr_left_coords = CoordFraction.from_absolute(
+                adjust_raw_x(
+                    sc_input.lpad_x,
+                    1 / 4,
+                    scalar=1 / 4 if split else 6 / 5,
+                ),
+                adjust_raw_y(sc_input.lpad_y, 1 / 2),
+            )
+            ptr_right_coords = CoordFraction.from_absolute(
+                adjust_raw_x(
+                    sc_input.rpad_x,
+                    3 / 4,
+                    scalar=1 / 4 if split else 6 / 5,
+                ),
+                adjust_raw_y(sc_input.rpad_y, 1 / 2),
+            )
 
         # Feature B (diacritic variants): while a pad-driven variant row is
         # open, that pad's press lock is bypassed (and its stored target

@@ -101,6 +101,12 @@ DEFAULT_SETTINGS = {
     # watcher (works elevated, unlike Steam Input's injected key chords).
     # Tray "Startup → Open Keyboard Chord". Default "X" (Steam+X).
     "sc_osk_open_chord": "X",
+    # Split keyboard layout (tray "Steam Controller -> Split Keyboard"):
+    # split the keyboard into left/right halves with a middle gap, each
+    # touchpad covering its own half (better ergonomics — no cross-body
+    # reach). Applied on the next OSK open (or live while open, like the
+    # other SC toggles).
+    "osk_split_layout": False,
     # Per-foreground-app remembered OSK "Move" position: {exe name (lowercase):
     # position index 0-5}. Remembered per app so the keyboard reopens where the
     # user left it in each app; apps without an entry keep the current spot

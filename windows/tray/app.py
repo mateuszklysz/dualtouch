@@ -93,6 +93,10 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
                 self.settings.get("sc_osk_trigger_actuation", "default")
             )
         )
+        # Split keyboard layout (left/right halves, one touchpad per side).
+        triton_state.set_split_layout(
+            bool(self.settings.get("osk_split_layout", False))
+        )
 
         # Trackpad press-force calibration (settings.json, hand-edited).
         triton_state.set_sc_pad_press(
@@ -413,6 +417,25 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         return lambda item: (
             self.settings.get("sc_click_button", "L1/R1") == name
         )
+
+    # Split keyboard layout: left/right halves, each touchpad covers its own
+    # half (no cross-body reach). Published to triton state immediately, so an
+    # already-open keyboard resizes its window + re-lays-out live (the main
+    # loop handles the flag change, exactly like a resize). The window WIDTH
+    # (full display width in split mode) is baked at Screen construction, so
+    # the cached Screen is rebuilt once the current run finishes / when closed.
+    def toggle_split_layout(self, icon, item):
+        self.settings["osk_split_layout"] = not item.checked
+        _save_settings(self.settings)
+        triton_state.set_split_layout(self.settings["osk_split_layout"])
+        if self._kbd_open:
+            self._pending_size_change = True
+        else:
+            self._rebuild_cached_screen()
+        self._refresh_menu()
+
+    def is_split_layout_checked(self, item):
+        return self.settings.get("osk_split_layout", False)
 
     # --- Diacritic variants (Feature B: hold a letter to pick accents) -------
     # Follows the existing toggle/radio pattern: save to settings.json AND
