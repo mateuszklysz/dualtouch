@@ -91,11 +91,15 @@ def load():
         handle = kernel32.LoadLibraryExW(path, None, flags)
         if not handle:
             raise OSError(f"Failed to load {path}: {ctypes.WinError()}")
-        # Wrap the already-loaded HMODULE via ctypes.CDLL's handle= kwarg (the
-        # positional form is rejected by ctypes 3.13, which fspath()s the name);
-        # the returned object keeps the DLL loaded for the process lifetime.
+        # Wrap the already-loaded HMODULE via ctypes.CDLL's handle= kwarg.
+        # The name must be the REAL dll path, not None: PyInstaller wraps
+        # ctypes.CDLL in frozen apps (pyimod03_ctypes), and its wrapper turns
+        # any load failure into "Failed to load dynlib/dll %r" using that
+        # name — a None name yields the useless "dll None" error. The path is
+        # only used as the error/label (_load_library returns the handle
+        # directly when handle is given, so no second load happens).
         return ctypes.CDLL(
-            None, handle=handle, use_errno=True, use_last_error=True
+            path, handle=handle, use_errno=True, use_last_error=True
         )
 
     SDL = _load(_CORE_DLL)
