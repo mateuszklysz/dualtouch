@@ -12,7 +12,7 @@
 ;      (6.7+ required for the native dark wizard styling used here)
 ;   3) Compile this script with Inno Setup (F9), or simply run:
 ;          python build.py --installer
-;      The finished setup exits to  Installer\Output\DualTouch-Setup-x.y.z.exe
+;      The finished setup exits to  dist\DualTouch-Setup-x.y.z.exe
 ;
 ;  If you change version/paths, edit only the #define block below.
 ;  The version override comes from build.py:  /DAPP_VERSION=x.y.z
@@ -59,6 +59,10 @@ DefaultGroupName={#MyAppName}
 UninstallDisplayName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
+; Fresh task defaults every run - never resurrect a stale remembered
+; selection (a previous unchecked "desktop icon" would otherwise stick).
+UsePreviousTasks=no
+
 ; No Restart Manager prompt - we stop the tray/helper ourselves in code.
 CloseApplications=no
 
@@ -66,9 +70,10 @@ CloseApplications=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
-; Output.
-OutputDir=Output
-OutputBaseFilename=DualTouch-Setup-{#MyAppVersion}
+; Output. The finished setup lands in the shared dist/ folder, next to
+; the built app folder.
+OutputDir=..\dist
+OutputBaseFilename=DualTouch-windows-setup-{#MyAppVersion}
 SetupIconFile={#AppIcon}
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -104,7 +109,7 @@ pl.RemoveSettings=Usuw take ustawienia i dzienniki (%APPDATA%\DualTouch)
 
 [Tasks]
 Name: "startmenu";   Description: "{cm:StartMenuShortcut}";        GroupDescription: "{cm:AdditionalIcons}"
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}";        GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}";        GroupDescription: "{cm:AdditionalIcons}"
 
 ; NOTE: no "start with Windows" shortcut here on purpose - DualTouch manages
 ; its own autostart scheduled task from the tray menu (Startup -> Start with
@@ -115,10 +120,10 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdi
 
 [Icons]
 ; Start menu (created unless the user unticks the task).
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startmenu
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: startmenu
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; Tasks: startmenu
 ; Desktop (optional).
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 ; Launch after install (checkbox ticked by default). The exe self-elevates

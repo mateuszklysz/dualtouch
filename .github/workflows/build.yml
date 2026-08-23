@@ -32,25 +32,31 @@ jobs:
 
       - name: Build Windows binaries
         working-directory: windows
-        run: python build.py
+        run: python build.py --installer
 
       - name: Package Windows release
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          # onedir build: ship the whole dist folder (exe + _internal) as-is.
+          # Nuitka onedir build: ship the whole dist folder (exe + helper + data) as-is.
           Copy-Item -LiteralPath windows\dist\DualTouch-windows -Destination release\DualTouch-windows -Recurse
           Copy-Item -LiteralPath README.md,LICENSE -Destination release\DualTouch-windows\
-          Compress-Archive -Path release\DualTouch-windows -DestinationPath DualTouch-windows.zip -Force
+          Compress-Archive -Path release\DualTouch-windows -DestinationPath DualTouch-windows-portable.zip -Force
+          # Inno Setup installer as its own release asset (built into windows\dist).
+          Copy-Item -LiteralPath windows\dist\DualTouch-windows-setup-*.exe -Destination .
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: DualTouch-windows
-          path: DualTouch-windows.zip
+          path: |
+            DualTouch-windows-portable.zip
+            DualTouch-windows-setup-*.exe
 
       - name: Attach Windows artifact to tagged release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 #v3.0.2
         with:
-          files: DualTouch-windows.zip
+          files: |
+            DualTouch-windows-portable.zip
+            DualTouch-windows-setup-*.exe

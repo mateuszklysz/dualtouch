@@ -109,7 +109,7 @@ distribution — `DualTouch-windows.exe`, the `DualTouch-cursor-helper.exe`
 copy, and everything they need; ship the whole folder together).
 
 With `--installer`, an Inno Setup 6 setup is compiled to
-`windows/Installer/Output/DualTouch-Setup-<version>.exe`
+`windows/dist/DualTouch-windows-setup-<version>.exe`
 ([Inno Setup](https://jrsoftware.org/isdl.php) must be installed or
 `ISCC.exe` on PATH).
 

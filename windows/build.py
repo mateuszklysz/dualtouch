@@ -437,7 +437,7 @@ def _build_installer():
         cwd=PROJECT_DIR,
         check=True,
     )
-    out = os.path.join(INSTALLER_DIR, "Output", f"DualTouch-Setup-{version}.exe")
+    out = os.path.join(DIST_DIR, f"DualTouch-windows-setup-{version}.exe")
     print(f"installer: {out}")
 
 
