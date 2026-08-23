@@ -194,13 +194,16 @@ class _LauncherMixin:
     def _close_persistent_sc(self):
         """Release the persisted SteamController and its HID handle. Called
         on app exit only — the handle is deliberately kept open for the whole
-        session otherwise (see launcher_thread)."""
-        if self._persistent_sc is not None:
-            with suppress(Exception):
-                self._persistent_sc.close()
+        session otherwise (see launcher_thread). Thread-safe: snapshot-and-
+        clear first so exactly one caller (menu-thread daemon or the stopping
+        launcher_thread) performs the close."""
+        sc = self._persistent_sc
+        if sc is not None:
             self._persistent_sc = None
             self._persistent_sc_passive = None
             self._persistent_sc_exclusive = None
+            with suppress(Exception):
+                sc.close()
 
     # background threads ----------------------------------------------------
 

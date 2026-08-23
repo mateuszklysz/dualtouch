@@ -484,7 +484,6 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         # Alt held at the OS level.
         with suppress(Exception):
             self._chord.release_alt()
-        self._close_persistent_sc()
         # Un-hide the system cursors on exit in case the OSK was open
         # when the user quit (the close-path restore already covers a
         # normal close; this covers quitting while the OSK is up).
@@ -492,6 +491,15 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
             import cursor_ctrl
 
             cursor_ctrl.force_restore_cursor()
+        # Device teardown writes haptic-stop HID reports that can stall for
+        # seconds on a wedged dongle; never run it on the tray menu thread or
+        # Exit looks frozen. Best-effort on a daemon thread instead — if the
+        # process exits first, the OS reclaims the handles anyway.
+        threading.Thread(
+            target=self._close_persistent_sc,
+            name="exit-teardown",
+            daemon=True,
+        ).start()
         icon.stop()
 
     def _notify(self, title, message):
