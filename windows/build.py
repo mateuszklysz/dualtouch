@@ -438,6 +438,8 @@ def _build_installer():
         check=True,
     )
     out = os.path.join(DIST_DIR, f"DualTouch-windows-setup-{version}.exe")
+    if not os.path.isfile(out):
+        raise SystemExit(f"installer missing after ISCC run: {out}")
     print(f"installer: {out}")
 
 

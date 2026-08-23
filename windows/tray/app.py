@@ -155,6 +155,9 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         self._persistent_sc = None
         self._persistent_sc_passive = None
         self._persistent_sc_exclusive = None
+        # Serializes _close_persistent_sc against the launcher thread (which
+        # also closes/rebuilds the persistent controller).
+        self._persistent_sc_lock = threading.Lock()
         # Open-keyboard request plumbing: _open_kbd_event asks
         # launcher_thread to open the on-screen keyboard (tray menu);
         # _launcher_wake wakes the launcher out of its reconnect backoff so the

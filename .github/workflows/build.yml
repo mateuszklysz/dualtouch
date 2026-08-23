@@ -43,7 +43,7 @@ jobs:
           Copy-Item -LiteralPath README.md,LICENSE -Destination release\DualTouch-windows\
           Compress-Archive -Path release\DualTouch-windows -DestinationPath DualTouch-windows-portable.zip -Force
           # Inno Setup installer as its own release asset (built into windows\dist).
-          Copy-Item -LiteralPath windows\dist\DualTouch-windows-setup-*.exe -Destination .
+          Copy-Item -Path windows\dist\DualTouch-windows-setup-*.exe -Destination .
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1

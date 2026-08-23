@@ -1,4 +1,4 @@
-; ============================================================================
+﻿; ============================================================================
 ;  DualTouch - Installer (Inno Setup 6)
 ;  Forced-dark wizard with a Gruvbox background (#282828), Start menu /
 ;  desktop shortcuts, graceful shutdown of a running instance before
@@ -99,13 +99,13 @@ Name: "pl"; MessagesFile: "compiler:Languages\Polish.isl"
 
 [CustomMessages]
 en.StartMenuShortcut=Create a Start menu shortcut
-pl.StartMenuShortcut=Utwrz skrt w menu Start
+pl.StartMenuShortcut=Utwórz skrót w menu Start
 en.CloseRunningText=DualTouch is still running.%n%nClose it so the installer can continue?
-pl.CloseRunningText=DualTouch jest nadal uruchomiony.%n%nZamkn go, aby instalator mg kontynuowa?
+pl.CloseRunningText=DualTouch jest nadal uruchomiony.%n%nZamknij go, aby instalator mógł kontynuować?
 en.StillRunning=DualTouch could not be stopped. Close it manually and run the setup again.
-pl.StillRunning=Nie udao si zamkn DualTouch. Zamkn je rcznie i uruchom instalator ponownie.
+pl.StillRunning=Nie udało się zamknąć DualTouch. Zamknij go ręcznie i uruchom instalator ponownie.
 en.RemoveSettings=Also remove settings and logs (%APPDATA%\DualTouch)
-pl.RemoveSettings=Usuw take ustawienia i dzienniki (%APPDATA%\DualTouch)
+pl.RemoveSettings=Usuń także ustawienia i dzienniki (%APPDATA%\DualTouch)
 
 [Tasks]
 Name: "startmenu";   Description: "{cm:StartMenuShortcut}";        GroupDescription: "{cm:AdditionalIcons}"

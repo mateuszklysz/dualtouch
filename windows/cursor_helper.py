@@ -306,7 +306,7 @@ def _allowed_image_names(frozen=None):
     python.exe, so the interpreter's own basename is the only entry."""
     if frozen is None:
         frozen = getattr(sys, "frozen", False) or "__compiled__" in globals()
-    names: set = set(_TRAY_IMAGE_NAMES)
+    names: set = set(_TRAY_IMAGE_NAMES) if frozen else set()
     if not frozen:
         names.add(os.path.basename(sys.executable).lower())
     return names

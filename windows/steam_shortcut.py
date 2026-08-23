@@ -107,8 +107,6 @@ def _shortcut_exe():
 
 def _shortcut_startdir():
     """Working directory for the shortcut — the exe's own directory."""
-    if _is_frozen():
-        return f'"{_exe_dir()}"'
     return f'"{_exe_dir()}"'
 
 
