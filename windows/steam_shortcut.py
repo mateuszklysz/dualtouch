@@ -73,11 +73,19 @@ _STEAM_REG_KEY = r"Software\Valve\Steam"
 _STEAM_REG_VALUE = "SteamPath"
 
 
+def _is_frozen():
+    # Nuitka doesn't set sys.frozen (PyInstaller does); its marker is the
+    # compiled module's __compiled__ attribute.
+    return getattr(sys, "frozen", False) or "__compiled__" in globals()
+
+
 def _exe_dir():
     """Directory treated as the install location (portable settings live
     here, next to the exe/script — same convention as tray.py)."""
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(os.path.abspath(sys.executable))
+    if _is_frozen():
+        from applog import _exe_path
+
+        return os.path.dirname(_exe_path())
     return os.path.dirname(os.path.abspath(__file__))
 
 
@@ -86,8 +94,11 @@ def _shortcut_exe():
     from the RUNNING process (the frozen exe's own path, or python launching
     the tray package in source runs) — so the library entry targets the real
     app wherever it was launched from, instead of a hardcoded dummy."""
-    if getattr(sys, "frozen", False):
-        return f'"{os.path.abspath(sys.executable)}"'
+    if _is_frozen():
+        # applog._exe_path: sys.executable lies under Nuitka standalone.
+        from applog import _exe_path
+
+        return f'"{_exe_path()}"'
     # Source run: Steam's Exe field must be an executable; point it at the
     # interpreter and carry the tray package in LaunchOptions (see
     # _shortcut_launch_options).
@@ -96,7 +107,7 @@ def _shortcut_exe():
 
 def _shortcut_startdir():
     """Working directory for the shortcut — the exe's own directory."""
-    if getattr(sys, "frozen", False):
+    if _is_frozen():
         return f'"{_exe_dir()}"'
     return f'"{_exe_dir()}"'
 
@@ -104,7 +115,7 @@ def _shortcut_startdir():
 def _shortcut_launch_options():
     """LaunchOptions for the shortcut: in source runs Steam must start the
     tray package via the interpreter; frozen builds need nothing."""
-    if getattr(sys, "frozen", False):
+    if _is_frozen():
         return ""
     return "-m tray"
 

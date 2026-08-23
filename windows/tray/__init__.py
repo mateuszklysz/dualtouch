@@ -21,7 +21,7 @@ from applog import _bundle_dir
 # IMPORTANT: TRITON_DATA must be set before importing triton.* — triton.resources
 # captures its env-var search path at import time.
 os.environ["TRITON_DATA"] = os.path.join(_bundle_dir(), "data")
-# (SDL3 DLLs are located by sdl3w/_loader.py via sys._MEIPASS — no env var needed.)
+# (SDL3 DLLs are located by sdl3w/_loader.py next to the bundle — no env var needed.)
 
 from .app import App, main  # noqa: E402
 from .helpers import _relaunch_elevated  # noqa: E402

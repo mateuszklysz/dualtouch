@@ -6,18 +6,29 @@ fails with ERROR_CURSOR_NOT_FOUND, SPI_SETCURSORS fails, GetCursorInfo
 fails -- verified at runtime). The reliable path is to run a NON-elevated
 helper in the interactive session.
 
-Mechanism (single exe, no second binary):
-  1. A Windows scheduled task "DualTouchCursor" re-invokes THIS exe with
-     --cursor-helper. A scheduled task starts at the interactive user's
-     integrity level (non-elevated) regardless of how the registering
-     process was elevated.
+Mechanism (one binary, two exe names):
+  1. A Windows scheduled task "DualTouchCursor" re-invokes the
+     DualTouch exe with --cursor-helper. A scheduled task starts at the
+     interactive user's integrity level (non-elevated) regardless of how
+     the registering process was elevated.
   2. To hide/show, we write a marker file (hide|show) and trigger the task
      via `schtasks /Run`. The re-invoked exe (in --cursor-helper mode)
      reads the marker, does the cursor work, and removes it.
+
+The daemon runs from "DualTouch-cursor-helper.exe" — build.py ships a
+copy of the tray exe under that name, carrying its own FileDescription
+resource ("DualTouch Cursor Helper") so Task Manager shows which process
+is which: "DualTouch-windows.exe" is the tray,
+"DualTouch-cursor-helper.exe" is the non-elevated cursor daemon. If the
+copy can't be maintained (read-only folder), the task falls back to
+re-invoking the tray exe itself.
 """
 
+import ctypes
 import os
 import secrets
+import shutil
+import struct
 import subprocess
 import sys
 from contextlib import suppress
@@ -26,11 +37,12 @@ from applog import _log, user_data_dir
 
 _TASK_NAME = "DualTouchCursor"
 _MARKER_NAME = "cursor_action.txt"
-# The helper is THIS SAME exe, re-invoked with --cursor-helper. The
+# The helper is THIS SAME binary, re-invoked with --cursor-helper. The
 # scheduled task runs it non-elevated (a scheduled task starts at the
 # interactive user's integrity level, not the elevated tray's), so the
 # same binary that runs the tray can also manipulate the session cursors.
 _HELPER_FLAG = "--cursor-helper"
+_HELPER_EXE_NAME = "DualTouch-cursor-helper.exe"
 
 # Per-session marker authentication token. Generated ONCE per process. A
 # same-user process could otherwise write "hide|1" (PID 1 = System, always
@@ -48,8 +60,77 @@ def _marker_path():
     return os.path.join(user_data_dir(), _MARKER_NAME)
 
 
+def _product_version(path):
+    """ProductVersion string of an exe via the version API, or None when it
+    has no readable VERSIONINFO."""
+    try:
+        ver = ctypes.WinDLL("version")
+        size = ver.GetFileVersionInfoSizeW(path, None)
+        if not size:
+            return None
+        buf = ctypes.create_string_buffer(size)
+        if not ver.GetFileVersionInfoW(path, 0, size, buf):
+            return None
+        ptr = ctypes.c_void_p()
+        n = ctypes.c_uint()
+        if not ver.VerQueryValueW(
+            buf, "\\VarFileInfo\\Translation", ctypes.byref(ptr), ctypes.byref(n)
+        ) or ptr.value is None:
+            return None
+        langid, codepage = struct.unpack_from(
+            "<HH", buf, ptr.value - ctypes.addressof(buf)
+        )
+        if (
+            not ver.VerQueryValueW(
+                buf,
+                f"\\StringFileInfo\\{langid:04x}{codepage:04x}\\ProductVersion",
+                ctypes.byref(ptr),
+                ctypes.byref(n),
+            )
+            or ptr.value is None
+        ):
+            return None
+        return ctypes.wstring_at(ptr.value)
+    except OSError:
+        return None
+
+
+def _frozen_helper_exe():
+    """Path of the renamed helper-exe copy next to the frozen tray exe,
+    refreshed from the running binary when missing or stale. Returns None
+    when the copy can't be maintained (e.g. read-only install folder) —
+    the caller falls back to applog._exe_path. Both exes are identical
+    standalone builds loading the same support files beside them; the
+    shipped copy differs only in its FileDescription resource (so Task
+    Manager can tell the two processes apart), which is why staleness is
+    judged by ProductVersion rather than raw size."""
+    try:
+        from applog import _exe_path
+
+        me = _exe_path()
+        if os.path.basename(me).lower() == _HELPER_EXE_NAME.lower():
+            return me  # already running as the helper copy
+        target = os.path.join(os.path.dirname(me), _HELPER_EXE_NAME)
+        try:
+            if os.path.isfile(target) and (
+                os.path.getsize(target) == os.path.getsize(me)
+                or (
+                    _product_version(target) is not None
+                    and _product_version(target) == _product_version(me)
+                )
+            ):
+                return target  # present and same build (shipped together)
+        except OSError:
+            pass
+        shutil.copyfile(me, target)
+        return target
+    except OSError as e:
+        _log(f"cursor: helper exe copy unavailable ({e!r}); using tray exe")
+        return None
+
+
 def install_helper():
-    """Register a scheduled task that re-invokes THIS exe with
+    """Register a scheduled task that re-invokes the DualTouch exe with
     --cursor-helper. A scheduled task starts the target at the interactive
     user's integrity level (non-elevated), which is the only context that
     can change the session's cursors — the elevated tray cannot. The task
@@ -60,12 +141,13 @@ def install_helper():
         import applog
 
         if applog._is_frozen():
-            # Frozen: re-invoke the SAME exe with --cursor-helper --daemon.
-            # The daemon flag makes it a persistent worker (watch marker,
-            # hide/show instantly) instead of a one-shot. --token passes the
-            # session auth token so the daemon only honors THIS tray's
-            # markers (see _TOKEN above).
-            exe = sys.executable
+            # Frozen: launch the renamed helper copy so Task Manager shows
+            # "DualTouch-cursor-helper.exe" for this daemon, distinct from
+            # the "DualTouch-windows.exe" tray. --daemon makes it a
+            # persistent worker (watch marker, hide/show instantly) instead
+            # of a one-shot; --token passes the session auth token so the
+            # daemon only honors THIS tray's markers (see _TOKEN above).
+            exe = _frozen_helper_exe() or applog._exe_path()
             args = f"{_HELPER_FLAG} --daemon --token {_TOKEN}"
         else:
             # Source run: task runs python cursor_helper.py --daemon (no

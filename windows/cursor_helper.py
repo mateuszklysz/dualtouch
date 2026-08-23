@@ -1,20 +1,21 @@
-"""Non-elevated cursor helper for DualTouch. The tray re-invokes THIS
-binary (the same exe) with --cursor-helper via a scheduled task, so it
-runs at the interactive user's integrity level (non-elevated). It reads a
-marker file (hide|show) written by the tray, does the cursor work on the
-interactive session (which the elevated tray cannot touch), and clears it.
+"""Non-elevated cursor helper for DualTouch. The tray re-invokes this
+binary (the DualTouch-cursor-helper.exe copy of the tray exe) with
+--cursor-helper via a scheduled task, so it runs at the interactive
+user's integrity level (non-elevated). It reads a marker file (hide|show)
+written by the tray, does the cursor work on the interactive session
+(which the elevated tray cannot touch), and clears it.
 
 SECURITY: the marker is authenticated. The tray generates a per-session
 random token, bakes it into this helper's task command line (--token ...)
 and stamps every marker write with it. A same-user process that writes
 "hide|1" (PID 1 = System) or any token-less/garbage marker is refused and
 the cursors are restored — a marker can only be honored when it carries
-the exact session token AND names a live process running the same binary
-as this helper. A stale/missing marker (no valid write for a few seconds)
-also restores the cursors and exits, so a blanked-cursor state can never
-persist.
+the exact session token AND names a live process running a DualTouch exe
+(the tray or the helper copy of the same binary). A stale/missing marker
+(no valid write for a few seconds) also restores the cursors and exits,
+so a blanked-cursor state can never persist.
 
-Usage (via schtasks /Run): DualTouch-windows.exe --cursor-helper --daemon --token <hex>
+Usage (via schtasks /Run): DualTouch-cursor-helper.exe --cursor-helper --daemon --token <hex>
 """
 
 import ctypes
@@ -59,8 +60,10 @@ try:
 
     _BASE = user_data_dir()
 except Exception:
-    if getattr(sys, "frozen", False):
-        _BASE = os.path.dirname(os.path.abspath(sys.executable))
+    if getattr(sys, "frozen", False) or "__compiled__" in globals():
+        from applog import _exe_path
+
+        _BASE = os.path.dirname(_exe_path())
     else:
         _BASE = os.path.dirname(os.path.abspath(__file__))
 _MARKER = os.path.join(_BASE, "cursor_action.txt")
@@ -291,13 +294,31 @@ def _daemon_loop():
         time.sleep(0.02)
 
 
+# Image basenames a marker's tray PID may run when frozen: the renamed
+# helper copy and the tray exe are byte-identical builds of the same
+# binary, so either name is "our own process".
+_TRAY_IMAGE_NAMES = ("dualtouch-windows.exe", "dualtouch-cursor-helper.exe")
+
+
+def _allowed_image_names(frozen=None):
+    """The set of image basenames a marker's PID may run. Frozen: any
+    DualTouch exe name (tray or helper copy). Source run: both ends are
+    python.exe, so the interpreter's own basename is the only entry."""
+    if frozen is None:
+        frozen = getattr(sys, "frozen", False) or "__compiled__" in globals()
+    names: set = set(_TRAY_IMAGE_NAMES)
+    if not frozen:
+        names.add(os.path.basename(sys.executable).lower())
+    return names
+
+
 def _pid_is_trusted(pid):
-    """True only if `pid` is a live process running the SAME binary as this
-    helper (the tray's python/DualTouch exe). A marker is honored only when
-    it names its own owner process — a random PID, PID 1 (System), or a
-    dead PID is refused even if the token somehow matched. psutil reads the
-    process table WITHOUT a handle, so it works across the elevation
-    boundary (the tray runs elevated; we don't)."""
+    """True only if `pid` is a live process running a DualTouch exe (the
+    tray's or the helper's own image — same binary, two names). A marker is
+    honored only when it names its own owner process — a random PID, PID 1
+    (System), or a dead PID is refused even if the token somehow matched.
+    psutil reads the process table WITHOUT a handle, so it works across the
+    elevation boundary (the tray runs elevated; we don't)."""
     if pid <= 1:
         return False
     try:
@@ -306,8 +327,7 @@ def _pid_is_trusted(pid):
         p = psutil.Process(int(pid))
         if not p.is_running():
             return False
-        name = (p.name() or "").lower()
-        return name == os.path.basename(sys.executable).lower()
+        return (p.name() or "").lower() in _allowed_image_names()
     except Exception:
         return False  # unknown: fail closed (don't honor the marker)
 

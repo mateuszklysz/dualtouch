@@ -4,7 +4,7 @@ This is the one place that knows where the binaries live, both when running
 from source (windows/sdl3w/dll) and when frozen by PyInstaller (the DLLs are
 added to the bundle root / a sdl3w/dll subdir via build.py --add-binary).
 
-Hand-rolled rather than depending on PySDL3 so the shipped onefile carries its
+Hand-rolled rather than depending on PySDL3 so the shipped bundle carries its
 own pinned SDL3 (no runtime download) and we control exactly what's bound.
 """
 
@@ -28,8 +28,9 @@ _TTF_DLL = "SDL3_ttf.dll"
 def _candidate_dirs():
     """Directories to search for the SDL3 DLLs, most-specific first."""
     dirs = []
-    # PyInstaller onefile extracts to sys._MEIPASS; build.py drops the DLLs both
-    # at the bundle root and under sdl3w/dll, so check both.
+    # Compiled (Nuitka standalone) builds place the bundle next to the exe;
+    # build.py drops the DLLs both at the bundle root and under sdl3w/dll,
+    # so check both. sys._MEIPASS (PyInstaller layouts) is honored too.
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         dirs.append(os.path.join(meipass, "sdl3w", "dll"))

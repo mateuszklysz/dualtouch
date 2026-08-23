@@ -35,7 +35,9 @@ _LEGACY_LNK = "DualTouch.lnk"
 
 
 def _is_frozen():
-    return getattr(sys, "frozen", False)
+    # applog-style detection: Nuitka doesn't set sys.frozen (PyInstaller
+    # does); its marker is the compiled module's __compiled__ attribute.
+    return getattr(sys, "frozen", False) or "__compiled__" in globals()
 
 
 def _startup_dir():
@@ -67,7 +69,11 @@ def _command():
     """(executable, arguments) the scheduled task should run. Frozen: the EXE
     itself. From source: the current interpreter running the tray package."""
     if _is_frozen():
-        return os.path.abspath(sys.executable), ""
+        # applog._exe_path, not sys.executable: Nuitka standalone reports a
+        # python.exe that doesn't exist in the dist folder.
+        from applog import _exe_path
+
+        return os.path.abspath(_exe_path()), ""
     return os.path.abspath(sys.executable), "-m tray"
 
 
