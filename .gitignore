@@ -19,6 +19,9 @@ env/
 build/
 dist/
 
+# —— Inno Setup installer output ——
+windows/Installer/Output/
+
 # —— Editor / OS / agent scratch ——
 AGENTS.md
 CLAUDE.md

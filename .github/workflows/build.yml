@@ -13,10 +13,13 @@ jobs:
   windows:
     name: Windows release package
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+        with:
+          # Full history so build.py can read the latest tag for the exe version.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -34,8 +37,9 @@ jobs:
       - name: Package Windows release
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path release\DualTouch-windows | Out-Null
-          Copy-Item -LiteralPath windows\dist\DualTouch-windows.exe -Destination release\DualTouch-windows\
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          # onedir build: ship the whole dist folder (exe + _internal) as-is.
+          Copy-Item -LiteralPath windows\dist\DualTouch-windows -Destination release\DualTouch-windows -Recurse
           Copy-Item -LiteralPath README.md,LICENSE -Destination release\DualTouch-windows\
           Compress-Archive -Path release\DualTouch-windows -DestinationPath DualTouch-windows.zip -Force
 
