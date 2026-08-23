@@ -41,7 +41,7 @@ APP_ICON_ICO = os.path.join("data", "images", "app_icon.ico")
 MAIN_FILE_DESCRIPTION = "DualTouch Steam Controller Keyboard"
 HELPER_FILE_DESCRIPTION = "DualTouch Cursor Helper"
 
-INSTALLER_DIR = os.path.join(PROJECT_DIR, "Installer")
+INSTALLER_DIR = os.path.join(PROJECT_DIR, "installer")
 ISS_PATH = os.path.join(INSTALLER_DIR, "DualTouch.iss")
 
 
@@ -423,7 +423,7 @@ def _find_iscc():
 
 
 def _build_installer():
-    """Compile Installer/DualTouch.iss with Inno Setup 6 (ISCC), passing the
+    """Compile installer/DualTouch.iss with Inno Setup 6 (ISCC), passing the
     git-tag version through /DAPP_VERSION for the setup's version metadata."""
     iscc = _find_iscc()
     if not iscc:
