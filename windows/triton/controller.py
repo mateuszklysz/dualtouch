@@ -147,6 +147,11 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
 
     def __init__(self, controller_state):
         self.controller_state = controller_state
+        # The click queue is a CLASS attribute (shared by every
+        # ControllerState). Drain anything a previous OSK session left
+        # queued: replaying stale pad-click coordinates into a fresh
+        # session would type a phantom key on open.
+        controller_state.click_queue.clear()
 
         prev_ptrs = controller_state.get_pointers()
         self.prev_ptr_left = prev_ptrs[0]
@@ -419,6 +424,13 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         steam_now = bool(
             sc_input.buttons & (SCButtons.STEAM | SCButtons.QAM)
         )  # "..." (QAM) acts like Steam
+        # Rising Steam edge: this hold is a fresh chord, so nothing has
+        # "used" it yet. Cleared HERE (before the L3/VIEW/X handlers) so a
+        # chord action later this same frame can mark it used — otherwise
+        # e.g. Steam+L3's mark below would be wiped and releasing Steam
+        # would close the OSK mid-media-control.
+        if steam_now and not self._steam_was_pressed:
+            self._saw_x_during_steam = False
 
         # L3 → Caps Lock, unless Steam is held, in which case Steam + L3 is
         # Play/Pause. Manual rising-edge detection so the binding doesn't
@@ -674,8 +686,6 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         # Steam+X opens the keyboard; Steam pressed and released alone closes it.
         # (steam_now was computed at the top of this method.)
         x_now = bool(sc_input.buttons & SCButtons.X)
-        if steam_now and not self._steam_was_pressed:
-            self._saw_x_during_steam = False
         if steam_now and x_now and not self._saw_x_during_steam:
             self._saw_x_during_steam = True
             state.show()

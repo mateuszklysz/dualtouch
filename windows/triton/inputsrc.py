@@ -30,13 +30,20 @@ _RECONNECT_DELAY = 0.5
 # Stick magnitude (of 32767) above which a frame counts as "actively in use".
 # Comfortably above resting drift (~3000) but below an intentional push.
 _ACTIVITY_STICK = 8000
+# Analog trigger pull (0..32767) that counts as activity — triggers rest at 0.
+_ACTIVITY_TRIGGER = 1000
 
 
 def _frame_has_activity(f):
     """True if this input frame shows the controller is actively being used
-    (any button/trigger, or a stick pushed past the deadzone). Used to decide
-    which controller 'owns' the current interaction so haptics go only to it."""
+    (any button, an analog trigger pull, or a stick pushed past the
+    deadzone). Used to decide which controller 'owns' the current
+    interaction so haptics go only to it."""
     if f.buttons:
+        return True
+    if abs(getattr(f, "ltrig", 0) or 0) >= _ACTIVITY_TRIGGER:
+        return True
+    if abs(getattr(f, "rtrig", 0) or 0) >= _ACTIVITY_TRIGGER:
         return True
     return (
         abs(f.lstick_x) > _ACTIVITY_STICK
