@@ -249,7 +249,9 @@ def test_split_layout_splits_rows_into_two_halves_with_gap():
             if len(row_lays) < 2:
                 continue
             split_idx = kb._split_index(i_row)
-            left_max = max(lay.x + lay.w for lay in row_lays if lay.col < split_idx)
+            left_max = max(
+                lay.x + lay.w for lay in row_lays if lay.col < split_idx
+            )
             right_min = min(lay.x for lay in row_lays if lay.col >= split_idx)
             assert right_min - left_max >= gap - 4  # rounding-tolerant
 
