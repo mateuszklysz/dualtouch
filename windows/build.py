@@ -47,20 +47,29 @@ INSTALLER_DIR = os.path.join(PROJECT_DIR, "installer")
 ISS_PATH = os.path.join(INSTALLER_DIR, "DualTouch.iss")
 
 
-def _app_version():
-    """Latest git tag (v-prefixed tags welcome) as the exe version, or 0.0.0
-    when building outside a tagged checkout (CI uses fetch-depth: 0)."""
+def _latest_git_tag():
+    """Latest tag reachable from HEAD ('' when unavailable), v-prefix kept."""
     try:
-        tag = subprocess.check_output(
+        return subprocess.check_output(
             ["git", "describe", "--tags", "--abbrev=0"],
             cwd=PROJECT_DIR,
             text=True,
             stderr=subprocess.DEVNULL,
         ).strip()
     except Exception:
-        return "0.0.0"
-    m = re.match(r"v?(\d[\w.\-]*)", tag)
-    return m.group(1) if m else "0.0.0"
+        return ""
+
+
+def _app_version():
+    """The exe/installer version. Precedence: the DUALTOUCH_VERSION env var
+    (CI forwards the pushed tag's ref name there), then the latest reachable
+    git tag; "latest" when neither yields a version-looking string (untagged
+    local builds)."""
+    for candidate in (os.environ.get("DUALTOUCH_VERSION"), _latest_git_tag()):
+        m = re.match(r"v?(\d[\w.\-]*)", (candidate or "").strip())
+        if m:
+            return m.group(1)
+    return "latest"
 
 
 def _preflight():

@@ -31,6 +31,10 @@ jobs:
 
       - name: Build Windows binaries
         working-directory: windows
+        env:
+          # Tag builds name their artifacts after the pushed tag; empty on
+          # workflow_dispatch (build.py then falls back to the latest tag).
+          DUALTOUCH_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: python build.py --installer
 
       - name: Package Windows release
