@@ -16,6 +16,12 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # windows/
 os.environ.setdefault("TRITON_DATA", os.path.join(_ROOT, "data"))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
+# Tests live in per-module subdirs (tests/<module>/...), so pytest's
+# per-file sys.path insertion no longer exposes tests/ itself — add it
+# explicitly for the shared harness lib (sc_runner).
+_TESTS = os.path.dirname(os.path.abspath(__file__))
+if _TESTS not in sys.path:
+    sys.path.insert(0, _TESTS)
 
 # Headless tests must never write into the REAL %APPDATA%\DualTouch\dualtouch.log
 # (the diagnostic log the user reads after live tests). The injection/pad

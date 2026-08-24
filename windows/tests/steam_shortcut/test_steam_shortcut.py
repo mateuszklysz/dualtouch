@@ -304,9 +304,9 @@ def fake_chord(tmpdir, monkeypatch):
     case: only the shipped base template exists (in controller_base, named
     chord_triton.vdf), and the base template has no button_a slot."""
     from steam_shortcut import (
+        _CHORD_APPID_DIR,
         _CHORD_BASE_TEMPLATE,
         _CHORD_CONFIG_SUBDIR,
-        _CHORD_APPID_DIR,
         _CHORD_FILENAME,
     )
 
