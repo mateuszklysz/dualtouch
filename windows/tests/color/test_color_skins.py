@@ -31,8 +31,12 @@ def test_available_skins_include_bundled():
     assert any("gruvbox" in n.lower() for n in names)
 
 
-def test_skin_selection_roundtrip():
+def test_skin_selection_roundtrip(monkeypatch):
+    # Hermetic: pretend Steam carries two extra themes so there is always
+    # something to switch to, regardless of the machine's Steam install.
+    monkeypatch.setattr(skins, "_steam_theme_names", lambda: {"Alpha", "Beta"})
     names = skins.available_skins()
+    assert "Gruvbox" in names and "Alpha" in names  # appended after order
     other = next(
         n for n in names if n.lower() != skins.get_active_skin().lower()
     )
