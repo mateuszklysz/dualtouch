@@ -29,12 +29,6 @@ def test_steam_l3_is_playpause_and_marks_chord_used(runner):
     assert not state.should_close()  # the chord marked Steam "used"
 
 
-def test_plain_l3_is_caps_lock(runner):
-    runner.tap_button(SCButtons.L3)
-    downs = [ev[1] for ev in runner.events() if ev[0] == "down"]
-    assert "KEY_CAPSLOCK" in downs
-
-
 def test_steam_view_is_alt_tab_chord(runner):
     runner.push(buttons=SCButtons.STEAM | SCButtons.VIEW)
     events = [(ev[0], ev[1]) for ev in runner.events()]

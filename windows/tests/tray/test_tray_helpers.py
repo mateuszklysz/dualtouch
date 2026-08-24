@@ -87,7 +87,6 @@ def test_relaunch_elevated_reports_failure(monkeypatch):
     def fail(*a, **kw):
         raise OSError("cancelled")
 
-    monkeypatch.setattr(helpers.ctypes, "windll", fail.__self__ if False else helpers.ctypes.windll)
     # ShellExecuteW raising (user cancels UAC) -> False, no crash.
     monkeypatch.setattr(
         helpers.ctypes.windll.shell32,
