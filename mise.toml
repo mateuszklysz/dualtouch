@@ -1,5 +1,4 @@
 [tools]
 python = "3.12"
-prek = "0.4.13"
-ruff = "0.16.3"
-"github:DetachHead/basedpyright" = "1.39.10"
+uv = "0.9.9"
+"pipx:pre-commit" = "4.6.2"

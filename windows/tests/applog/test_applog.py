@@ -212,6 +212,7 @@ def test_parse_marker_rejects_malformed(tmpdir):
 # DualTouch-windows.exe, so _pid_is_trusted must accept BOTH image names
 # (same binary, two copies), not just the helper's own basename.
 
+
 def test_allowed_image_names_frozen_pair(tmpdir):
     ch = _cursor_helper(tmpdir)
     names = ch._allowed_image_names(frozen=True)

@@ -31,8 +31,12 @@ def spring_p(t, zeta, omega0):
     if t <= 0.0:
         return 0.0
     s = 1.0 - zeta * zeta
-    wd = omega0 * math.sqrt(s)
     e = math.exp(-zeta * omega0 * t)
+    if s <= 1e-9:
+        # Critically / over-damped limit (ζ→1): the sinusoid term collapses
+        # to 1 + ω0·t under the exponential — avoids the √0 division.
+        return 1.0 - e * (1.0 + omega0 * t)
+    wd = omega0 * math.sqrt(s)
     return 1.0 - e * (
         math.cos(wd * t) + (zeta / math.sqrt(s)) * math.sin(wd * t)
     )

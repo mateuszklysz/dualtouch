@@ -221,12 +221,12 @@ def test_split_layout_splits_rows_into_two_halves_with_gap():
         assert band is not None
         band_left, band_right = band
         for i_row in range(kb.key_rows):
-            row_lays = [l for l in layouts if l.row == i_row]
+            row_lays = [lay for lay in layouts if lay.row == i_row]
             if len(row_lays) < 2:
                 continue
             split_idx = kb._split_index(i_row)
-            left = [l for l in row_lays if l.col < split_idx]
-            right = [l for l in row_lays if l.col >= split_idx]
+            left = [lay for lay in row_lays if lay.col < split_idx]
+            right = [lay for lay in row_lays if lay.col >= split_idx]
             assert left and right, "split layout must leave keys on both sides"
             # Left half hugs the left edge; right half hugs the right edge.
             assert left[0].x <= screen.width // 2
@@ -234,8 +234,8 @@ def test_split_layout_splits_rows_into_two_halves_with_gap():
             # No left key crosses into the right half and vice versa (the
             # halves may each reach past center when a wide key like Space
             # dominates its side — the gap between them is the invariant).
-            left_max = max(l.x + l.w for l in left)
-            right_min = min(l.x for l in right)
+            left_max = max(lay.x + lay.w for lay in left)
+            right_min = min(lay.x for lay in right)
             assert left_max < right_min
             # Every row's gap sits on the SAME band (rounding-tolerant: each
             # key's width is rounded, so error grows with key count), which is
@@ -245,12 +245,14 @@ def test_split_layout_splits_rows_into_two_halves_with_gap():
             assert abs(right_min - band_right) <= tol
         # The halves of every row are separated by a real (px) gap.
         for i_row in range(kb.key_rows):
-            row_lays = [l for l in layouts if l.row == i_row]
+            row_lays = [lay for lay in layouts if lay.row == i_row]
             if len(row_lays) < 2:
                 continue
             split_idx = kb._split_index(i_row)
-            left_max = max(l.x + l.w for l in row_lays if l.col < split_idx)
-            right_min = min(l.x for l in row_lays if l.col >= split_idx)
+            left_max = max(
+                lay.x + lay.w for lay in row_lays if lay.col < split_idx
+            )
+            right_min = min(lay.x for lay in row_lays if lay.col >= split_idx)
             assert right_min - left_max >= gap - 4  # rounding-tolerant
 
         # Hit-testing: a click on the left half finds a LEFT-half key, a

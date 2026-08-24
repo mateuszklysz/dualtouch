@@ -13,4 +13,5 @@ ignore = [
 
 [lint.per-file-ignores]
 # Tests may use bare asserts and fixtures with unused params.
-"tests/*.py" = ["B017"]
+# (** crosses the per-module subdirs: tests/<module>/<name>.py)
+"tests/**/*.py" = ["B017"]

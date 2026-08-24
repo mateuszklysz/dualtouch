@@ -78,8 +78,10 @@ def _preflight():
 
 
 def _clean_previous():
-    for stale in [OUT_DIR] + glob.glob(os.path.join(DIST_DIR, "*.dist")) + glob.glob(
-        os.path.join(DIST_DIR, "*.build")
+    for stale in (
+        [OUT_DIR]
+        + glob.glob(os.path.join(DIST_DIR, "*.dist"))
+        + glob.glob(os.path.join(DIST_DIR, "*.build"))
     ):
         if os.path.isdir(stale):
             shutil.rmtree(stale, ignore_errors=True)
@@ -110,7 +112,10 @@ def _ver_block(key, value=b"", vtype=0, children=b""):
 
 
 def _fixed_file_info(version):
-    parts = [int(p) if p.isdigit() else 0 for p in (version.split(".") + ["0"] * 4)[:4]]
+    parts = [
+        int(p) if p.isdigit() else 0
+        for p in (version.split(".") + ["0"] * 4)[:4]
+    ]
     ms_hi, ms_lo, ls_hi, ls_lo = parts
     return struct.pack(
         "<IIIIIIIIIIIII",
@@ -158,7 +163,10 @@ def _read_version_strings(path):
     base = ctypes.addressof(data)
     if (
         not ver.VerQueryValueW(
-            data, "\\VarFileInfo\\Translation", ctypes.byref(ptr), ctypes.byref(u16)
+            data,
+            "\\VarFileInfo\\Translation",
+            ctypes.byref(ptr),
+            ctypes.byref(u16),
         )
         or u16.value < 4
         or ptr.value is None
@@ -232,7 +240,11 @@ def _enum_version_resources(path):
     INTRESOURCE atoms (< 0x10000); anything else is skipped."""
     k32 = ctypes.windll.kernel32
     k32.LoadLibraryExW.restype = wintypes.HMODULE
-    k32.LoadLibraryExW.argtypes = [wintypes.LPCWSTR, wintypes.HANDLE, wintypes.DWORD]
+    k32.LoadLibraryExW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.HANDLE,
+        wintypes.DWORD,
+    ]
     k32.EnumResourceNamesW.argtypes = [
         wintypes.HMODULE,
         ctypes.c_void_p,
@@ -250,7 +262,9 @@ def _enum_version_resources(path):
     LOAD_LIBRARY_AS_DATAFILE = 0x00000002
     hmod = k32.LoadLibraryExW(path, None, LOAD_LIBRARY_AS_DATAFILE)
     if not hmod:
-        raise OSError(f"LoadLibraryExW failed on {path} (err {ctypes.GetLastError()})")
+        raise OSError(
+            f"LoadLibraryExW failed on {path} (err {ctypes.GetLastError()})"
+        )
     names, targets = [], []
 
     def on_name(_hmod, _type, name, _lparam):
@@ -266,7 +280,9 @@ def _enum_version_resources(path):
     try:
         cb_name = _ENUMRESNAMEPROCW(on_name)
         if not k32.EnumResourceNamesW(hmod, ctypes.c_void_p(16), cb_name, 0):
-            raise OSError(f"EnumResourceNamesW failed (err {ctypes.GetLastError()})")
+            raise OSError(
+                f"EnumResourceNamesW failed (err {ctypes.GetLastError()})"
+            )
         cb_lang = _ENUMRESLANGPROCW(on_lang)
         for res_id in names:
             k32.EnumResourceLanguagesW(
@@ -293,7 +309,9 @@ def _replace_version_resource(path, blob):
     targets = _enum_version_resources(path) or [(1, 0x0409)]
     hupd = k32.BeginUpdateResourceW(path, False)
     if not hupd:
-        raise OSError(f"BeginUpdateResourceW failed on {path} (err {ctypes.GetLastError()})")
+        raise OSError(
+            f"BeginUpdateResourceW failed on {path} (err {ctypes.GetLastError()})"
+        )
     ok = True
     for res_id, lang in targets:
         ok &= bool(
@@ -307,12 +325,16 @@ def _replace_version_resource(path, blob):
             )
         )
     if not k32.EndUpdateResourceW(hupd, not ok):
-        raise OSError(f"EndUpdateResourceW failed on {path} (err {ctypes.GetLastError()})")
+        raise OSError(
+            f"EndUpdateResourceW failed on {path} (err {ctypes.GetLastError()})"
+        )
     if not ok:
         raise OSError(f"UpdateResourceW failed while rewriting {path}")
 
 
-def _set_file_description(exe_path, file_description, original_filename, internal_name):
+def _set_file_description(
+    exe_path, file_description, original_filename, internal_name
+):
     strings, translation = _read_version_strings(exe_path)
     version = strings.get("FileVersion") or _app_version()
     strings.update(
@@ -366,7 +388,9 @@ def _run_nuitka():
 def _assemble_output():
     dist_dirs = glob.glob(os.path.join(DIST_DIR, "*.dist"))
     if len(dist_dirs) != 1:
-        raise SystemExit(f"expected exactly one Nuitka .dist folder, got {dist_dirs}")
+        raise SystemExit(
+            f"expected exactly one Nuitka .dist folder, got {dist_dirs}"
+        )
     if os.path.exists(OUT_DIR):
         shutil.rmtree(OUT_DIR, ignore_errors=True)
     os.rename(dist_dirs[0], OUT_DIR)

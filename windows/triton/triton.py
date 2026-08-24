@@ -199,6 +199,63 @@ def _flush_position_persist(now=None):
         pass
 
 
+def drain_input_work(controller_state, virtual_kb):
+    """Drain controller-queued input into keyboard work.
+
+    Shared by main()'s loop and the test SceneRunner so both drive the
+    exact same production path: DPAD steps (variant-row aware), the pad
+    click queue, and queued key presses (hold-to-extend / auto-repeat
+    / silent-deferred semantics included)."""
+    # DPAD: while a variant row is open, left/right moves the
+    # highlighted variant (the row owns the DPAD then); otherwise step
+    # the cursor using the actual layout pixel positions.
+    for direction, haptic in state.drain_dpad_queue():
+        if state.is_diacritic_open():
+            if direction in ("LEFT", "RIGHT"):
+                state.set_diacritic_index(
+                    diacritics.step_variant_index(
+                        state.get_diacritic_index(),
+                        1 if direction == "RIGHT" else -1,
+                        state.get_diacritic_variant_count(),
+                    )
+                )
+            continue
+        vkb.step_cursor(virtual_kb, direction, haptic=haptic)
+    vkb.process_click_queue(virtual_kb, controller_state.click_queue)
+    # Key presses: fire the callback of the queued key. A repeat hit
+    # (something held) only fires over a repeatable key (Backspace /
+    # arrows), so holding rubs out / steps without machine-gunning
+    # ordinary keys.
+    for (
+        row,
+        col,
+        is_repeat,
+        is_silent,
+    ) in state.drain_key_press_queue():
+        if 0 <= row < len(virtual_kb.keys) and 0 <= col < len(
+            virtual_kb.keys[row]
+        ):
+            key = virtual_kb.keys[row][col]
+            if is_repeat and not vkb.is_repeatable(key):
+                # Hold-to-extend (Feature B): a held A over a letter
+                # opens its variant row on the first repeat (the base
+                # already fired on the press edge); A-release commits.
+                if vkb.diacritic_variants_for_key(key):
+                    vkb.open_diacritic_rc(virtual_kb, row, col, "a")
+                continue
+            # Tell dispatch_key this is an auto-repeat so the key-press
+            # sound doesn't machine-gun on held keys; a deferred
+            # release (base of a variant key typed on release) is
+            # silent — its press edge already clicked.
+            vkb._dispatch_is_repeat = is_repeat
+            vkb._dispatch_silent = is_silent
+            try:
+                vkb.dispatch_key(virtual_kb, key)
+            finally:
+                vkb._dispatch_is_repeat = False
+                vkb._dispatch_silent = False
+
+
 def main(cached_screen=None, on_close=None):
     """Run the OSK until it closes.
 
@@ -828,25 +885,12 @@ def main(cached_screen=None, on_close=None):
                 scr._anim_target = None
                 virtual_kb.update_dimensions()
                 scr._resize_dirty = True
-            # --- Input-driven work runs EVERY loop iteration (NOT gated by the
-            # render rate), so cursor steps and key presses drain at low latency
-            # (the SC's frames go straight to the input thread).
-            # DPAD: while a variant row is open, left/right moves the
-            # highlighted variant (the row owns the DPAD then); otherwise step
-            # the cursor using the actual layout pixel positions.
-            for direction, haptic in state.drain_dpad_queue():
-                if state.is_diacritic_open():
-                    if direction in ("LEFT", "RIGHT"):
-                        state.set_diacritic_index(
-                            diacritics.step_variant_index(
-                                state.get_diacritic_index(),
-                                1 if direction == "RIGHT" else -1,
-                                state.get_diacritic_variant_count(),
-                            )
-                        )
-                    continue
-                vkb.step_cursor(virtual_kb, direction, haptic=haptic)
-            vkb.process_click_queue(virtual_kb, controller_state.click_queue)
+            # --- Input-driven work runs EVERY loop iteration (NOT gated by
+            # the render rate), so cursor steps and key presses drain at low
+            # latency (the SC's frames go straight to the input thread). The
+            # shared drain (DPAD + click queue + key presses) lives in
+            # drain_input_work so the test harness exercises the same path.
+            drain_input_work(controller_state, virtual_kb)
             # Mouse left-button hold-to-repeat: while held over a repeatable
             # key (Backspace / arrows), re-queue it on the shared cadence.
             # Queued before the drain so it dispatches this same frame.
@@ -870,38 +914,7 @@ def main(cached_screen=None, on_close=None):
                     mouse_repeat_at = float("inf")
                 else:
                     mouse_repeat_at = float("inf")
-            # Key presses: fire the callback of the queued key. A repeat hit
-            # (something held) only fires over a repeatable key (Backspace /
-            # arrows), so holding rubs out / steps without machine-gunning
-            # ordinary keys.
-            for (
-                row,
-                col,
-                is_repeat,
-                is_silent,
-            ) in state.drain_key_press_queue():
-                if 0 <= row < len(virtual_kb.keys) and 0 <= col < len(
-                    virtual_kb.keys[row]
-                ):
-                    key = virtual_kb.keys[row][col]
-                    if is_repeat and not vkb.is_repeatable(key):
-                        # Hold-to-extend (Feature B): a held A over a letter
-                        # opens its variant row on the first repeat (the base
-                        # already fired on the press edge); A-release commits.
-                        if vkb.diacritic_variants_for_key(key):
-                            vkb.open_diacritic_rc(virtual_kb, row, col, "a")
-                        continue
-                    # Tell dispatch_key this is an auto-repeat so the key-press
-                    # sound doesn't machine-gun on held keys; a deferred
-                    # release (base of a variant key typed on release) is
-                    # silent — its press edge already clicked.
-                    vkb._dispatch_is_repeat = is_repeat
-                    vkb._dispatch_silent = is_silent
-                    try:
-                        vkb.dispatch_key(virtual_kb, key)
-                    finally:
-                        vkb._dispatch_is_repeat = False
-                        vkb._dispatch_silent = False
+
             if state.take_position_cycle_request():
                 _cycle_window_position(scr.window)
                 _persist_position_for_app(_position_index[0])
