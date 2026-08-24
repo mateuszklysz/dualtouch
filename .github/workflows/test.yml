@@ -15,19 +15,14 @@ jobs:
           # Full history so pre-commit can diff against origin/main.
           fetch-depth: 0
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
+      # Installs mise + everything in mise.toml (python 3.12, uv,
+      # pre-commit) and puts the shims on PATH for later steps.
+      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2.4.4
 
-      - name: Install mise
-        shell: pwsh
+      - name: Install python dependencies
         run: |
-          Invoke-WebRequest https://mise.run.ps1 -UseBasicParsing | Invoke-Expression
-          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.local\bin"
-
-      - name: Install dependencies
-        run: |
-          pip install --prefer-binary -r requirements.txt
+          python -m pip install --upgrade pip
+          python -m pip install --prefer-binary -r requirements.txt
           pip install -r windows/requirements-dev.txt
 
       - name: Install tools (mise.toml pre-commit)
