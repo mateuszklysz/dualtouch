@@ -180,9 +180,6 @@ class _D(_PadMixin):
         self._liftoff_coord = {}
         self._liftoff_clicked = {}
         self._liftoff_t0 = {}
-        self._hover_start = {}
-        self._hover_rc = {}
-        self._diacritic_hover = {}
         self.sc_input_previous = _P(0)
         self.controller_state = _CS()
         self._prev = 0
@@ -341,18 +338,11 @@ def test_release_held_clears_liftoff_trackers():
     mgr._liftoff_coord = {LT: _a_center_cf(_build_kb())}
     mgr._liftoff_clicked = {LT: False}
     mgr._liftoff_t0 = {LT: 1.0}
-    # Hover-to-open trackers are cleared alongside the lift-off ones.
-    mgr._hover_start = {LT: 2.0}
-    mgr._hover_rc = {LT: (3, 1)}
-    mgr._diacritic_hover = {LT: True}
     mgr.release_held()
     assert mgr._liftoff_touch == {}
     assert mgr._liftoff_coord == {}
     assert mgr._liftoff_clicked == {}
     assert mgr._liftoff_t0 == {}
-    assert mgr._hover_start == {}
-    assert mgr._hover_rc == {}
-    assert mgr._diacritic_hover == {}
 
 
 def test_state_roundtrip():

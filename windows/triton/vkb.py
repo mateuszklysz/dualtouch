@@ -1043,9 +1043,9 @@ def commit_diacritic(char=None):
     variant via uinput.tap_char. There is no Backspace to undo: the base never
     stood. `char` is read from the open row session when not given. Closes
     the row FIRST and in a finally. The click sound fires HERE, on the typed
-    variant — one tick per inserted character. On the hold path the
-    press-edge tick (see pad/controller defer handling) reads as the
-    down-stroke and this as the release; on the hover/mouse/A paths this is
+    variant — one tick per inserted character. On the hold/lift-click paths
+    the press-edge tick (see pad/controller defer handling) reads as the
+    down-stroke and this as the release; on the mouse/A paths this is
     the only tick, so hitting an accent key always clicks. A base selection
     (index -1) is a no-op: the caller types the base letter on release
     instead."""

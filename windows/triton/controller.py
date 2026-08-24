@@ -232,12 +232,6 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         self._liftoff_coord = {}
         self._liftoff_clicked = {}
         self._liftoff_t0 = {}
-        # Per-pad hover-to-open diacritics trackers (see pad._PadMixin):
-        # hover countdown start time, hovered key (row, col), and which pads'
-        # open variant rows came from a hover.
-        self._hover_start = {}
-        self._hover_rc = {}
-        self._diacritic_hover = {}
         # LT's role is decided on its rising edge from whether the left pad was
         # being touched: "shift" (pressed untouched) or "click" (pressed while
         # touching). Latched until LT is released so a later touch can't flip it.
@@ -1068,10 +1062,6 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         self._liftoff_coord.clear()
         self._liftoff_clicked.clear()
         self._liftoff_t0.clear()
-        # And the hover-to-open trackers with them.
-        self._hover_start.clear()
-        self._hover_rc.clear()
-        self._diacritic_hover.clear()
 
 
 def update(sc, sc_input, manager):
