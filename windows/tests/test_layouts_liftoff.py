@@ -52,6 +52,24 @@ def test_normalize_layout_name_case_insensitive():
     assert normalize_layout_name(42) is None
 
 
+def test_user_added_board_roundtrip(tmp_path, monkeypatch):
+    """A dropped-in keyboard-layout-*.yaml must be offered AND loadable
+    under its derived name — never silently fall back to QWERTY."""
+    from triton import layouts
+
+    (tmp_path / "keyboard-layout-brazil.yaml").write_text(
+        "keys: []\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(layouts, "_cfg_dir", lambda: str(tmp_path))
+
+    assert "Brazil" in layouts.available_layouts()
+    assert layouts.layout_filename("Brazil") == "keyboard-layout-brazil.yaml"
+    assert layouts.layout_filename("brazil") == "keyboard-layout-brazil.yaml"
+    assert layouts.normalize_layout_name("BRAZIL") == "Brazil"
+    # Unknown names still fall back safely.
+    assert layouts.layout_filename("nope") == "keyboard-layout.yaml"
+
+
 def test_load_kb_config_builds_selected_layout():
     import steamcontroller.uinput as sui
 
@@ -323,11 +341,18 @@ def test_release_held_clears_liftoff_trackers():
     mgr._liftoff_coord = {LT: _a_center_cf(_build_kb())}
     mgr._liftoff_clicked = {LT: False}
     mgr._liftoff_t0 = {LT: 1.0}
+    # Hover-to-open trackers are cleared alongside the lift-off ones.
+    mgr._hover_start = {LT: 2.0}
+    mgr._hover_rc = {LT: (3, 1)}
+    mgr._diacritic_hover = {LT: True}
     mgr.release_held()
     assert mgr._liftoff_touch == {}
     assert mgr._liftoff_coord == {}
     assert mgr._liftoff_clicked == {}
     assert mgr._liftoff_t0 == {}
+    assert mgr._hover_start == {}
+    assert mgr._hover_rc == {}
+    assert mgr._diacritic_hover == {}
 
 
 def test_state_roundtrip():

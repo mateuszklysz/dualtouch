@@ -397,7 +397,6 @@ def reset_session():
     global _emoji_open, _window_position_request
     global _last_controller_activity, _osk_mouse_inject_t
     global _diacritic
-    global _hover_fill
     with should_exit_lock:
         should_exit = False
     with _emoji_lock:
@@ -442,8 +441,6 @@ def reset_session():
         _osk_mouse_inject_t = 0.0
     with _diacritic_lock:
         _diacritic = None
-    with _hover_fill_lock:
-        _hover_fill = None
 
 
 def set_last_controller_activity(t):
@@ -1004,28 +1001,6 @@ def set_sc_liftoff_enter(enabled):
 def is_sc_liftoff_enabled():
     with _sc_lock:
         return _sc_liftoff_enter
-
-
-# Hover-to-open diacritics: while a finger RESTS on a variant-capable key
-# without any click activity, the pad thread publishes the hover progress so
-# the renderer can draw the "key fills in" bar over that key. Published as
-# (row, col, fraction 0..1) — row/col identify the target key robustly across
-# size changes — or None when no hover is in flight. Cleared by the pad
-# thread when the finger moves off, clicks, lifts, or when the variant row
-# opens; also wiped per session.
-_hover_fill = None
-_hover_fill_lock = Lock()
-
-
-def set_hover_fill(progress):
-    global _hover_fill
-    with _hover_fill_lock:
-        _hover_fill = progress
-
-
-def get_hover_fill():
-    with _hover_fill_lock:
-        return _hover_fill
 
 
 def key_sound_tick():

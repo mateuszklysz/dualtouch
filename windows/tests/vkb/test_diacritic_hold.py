@@ -23,7 +23,7 @@ def _hold_open_row(runner, label="a"):
     pos = runner.raw_at_cell(label)
     runner.advance(0.02)
     runner.push(buttons=SCButtons.LB, **pos)  # press edge: defer + sound
-    for _ in range(8):  # 8 * 0.06 s clears the 0.4 s delay mid-band
+    for _ in range(10):  # 10 * 0.06 s clears the 0.5 s accent window mid-band
         runner.advance(0.06)
         runner.push(buttons=SCButtons.LB, **pos)
     assert state.is_diacritic_open()
@@ -53,7 +53,8 @@ def test_hold_commits_variant_under_finger_x(runner, en_a):
     runner.push(buttons=0, **pos)  # release commits the highlighted one
     assert runner.typed() == en_a[picked]
     assert not state.is_diacritic_open()
-    assert runner.sounds == 1  # press edge only
+    # Press edge tick + the accent-commit tick (commit_diacritic clicks).
+    assert runner.sounds == 2
 
 
 def test_hold_with_finger_off_strip_defaults_to_first(runner, en_a):
@@ -91,7 +92,7 @@ def test_dpad_moves_selection_while_row_open(runner, en_a):
     state.set_cursor(*runner.cell_rc("a"))
     runner.advance(0.02)
     runner.push(buttons=SCButtons.A)
-    for _ in range(8):
+    for _ in range(10):
         runner.advance(0.06)
         runner.push(buttons=SCButtons.A)
     assert state.get_diacritic_source() == "a"
@@ -114,7 +115,7 @@ def test_a_button_hold_opens_row_and_commits_first(runner, en_a):
     state.set_cursor(*runner.cell_rc("a"))
     runner.advance(0.02)
     runner.push(buttons=SCButtons.A)  # press edge: defer + click sound
-    for _ in range(8):
+    for _ in range(10):
         runner.advance(0.06)
         runner.push(buttons=SCButtons.A)
     assert state.is_diacritic_open()
@@ -122,7 +123,8 @@ def test_a_button_hold_opens_row_and_commits_first(runner, en_a):
     runner.auto_advance = True
     runner.push()
     assert runner.typed() == en_a[0]
-    assert runner.sounds == 1
+    # Press edge tick + the accent-commit tick (commit_diacritic clicks).
+    assert runner.sounds == 2
 
 
 def test_a_button_quick_tap_types_base_silently(runner):

@@ -90,18 +90,27 @@ def _labels(kb):
 
 def test_letters_always_match_their_scancode():
     """Letter keys ride their own scancodes on EVERY board (a on KEY_A …),
-    so they type true under any Latin Windows layout — never drift."""
+    so they type true under any Latin Windows layout — never drift. A
+    SYMBOL label on a letter scancode is only legal in char-mode: language
+    boards mirror their physical keyboard (AZERTY prints ',' on the US-M
+    position), and injection makes it type true anywhere."""
     for name in ALL_BOARDS:
         for key in _cells(_board(name)):
             pair = US.get(key.keycode)
             if pair is None or not pair[0].isalpha():
                 continue
             base, shifted = pair
-            assert key.str == base, (
-                f"{name}: key prints {key.str!r} but its scancode types "
-                f"{base!r}"
-            )
-            if key.shifted is not None:
+            if key.str.isalpha():
+                assert key.str == base, (
+                    f"{name}: key prints {key.str!r} but its scancode types "
+                    f"{base!r}"
+                )
+            else:
+                assert key.char_mode, (
+                    f"{name}: symbol {key.str!r} on scancode {base!r} needs "
+                    f"`char: true` (it would type {base!r})"
+                )
+            if key.shifted is not None and key.shifted.isalpha():
                 assert key.shifted == shifted, (
                     f"{name}: shift-label above {base!r} should be "
                     f"{shifted!r}, got {key.shifted!r}"

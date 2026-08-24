@@ -1042,10 +1042,13 @@ def commit_diacritic(char=None):
     the base still untyped, so a release over a variant just types that
     variant via uinput.tap_char. There is no Backspace to undo: the base never
     stood. `char` is read from the open row session when not given. Closes
-    the row FIRST and in a finally. The click sound fired at the PRESS edge
-    (see pad/controller defer handling), so a held variant pick doesn't sound
-    laggy on release. A base selection (index -1) is a no-op: the caller types
-    the base letter on release instead."""
+    the row FIRST and in a finally. The click sound fires HERE, on the typed
+    variant — one tick per inserted character. On the hold path the
+    press-edge tick (see pad/controller defer handling) reads as the
+    down-stroke and this as the release; on the hover/mouse/A paths this is
+    the only tick, so hitting an accent key always clicks. A base selection
+    (index -1) is a no-op: the caller types the base letter on release
+    instead."""
     if char is None:
         char = state.get_diacritic_selected_char()
     ok = None
@@ -1053,6 +1056,8 @@ def commit_diacritic(char=None):
         if not char:
             return
         ok = kb.tap_char(char)
+        if ok:
+            state.key_sound_tick()
     finally:
         # ALWAYS close the row: if the injection throws, an open row would
         # make every later hold queue a ("repeat", coord) and silently break

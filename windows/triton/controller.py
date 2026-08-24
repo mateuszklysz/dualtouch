@@ -630,7 +630,13 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
                 state.key_sound_tick()
             else:
                 state.queue_key_press(a_row, a_col)
-            self._a_repeat_at = now + self.BACKSPACE_HOLD_DELAY
+            # Variant-capable cells use the same 0.5 s accent window as the
+            # pad hold; plain keys keep the backspace rub-out clock.
+            self._a_repeat_at = now + (
+                self.ACCENT_HOLD_OPEN
+                if self._a_deferred_cell is not None
+                else self.BACKSPACE_HOLD_DELAY
+            )
         elif a_pressed and now >= self._a_repeat_at:
             state.queue_key_press(a_row, a_col, repeat=True)
             self._a_repeat_at = now + self.BACKSPACE_REPEAT
@@ -1062,11 +1068,10 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         self._liftoff_coord.clear()
         self._liftoff_clicked.clear()
         self._liftoff_t0.clear()
-        # And the hover-to-open trackers; hide any hover fill with them.
+        # And the hover-to-open trackers with them.
         self._hover_start.clear()
         self._hover_rc.clear()
         self._diacritic_hover.clear()
-        state.set_hover_fill(None)
 
 
 def update(sc, sc_input, manager):

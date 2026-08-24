@@ -1,4 +1,4 @@
-﻿# DualTouch
+# DualTouch
 
 <p align="center">
   <img src="windows/data/images/icon.png" alt="DualTouch" width="220">
@@ -34,7 +34,7 @@ It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/S
 
 - **Global overlay** — draws above every app, not tied to Big Picture or a launcher.
 - **Native SDL3 rendering** — low CPU/memory use; skins, transparency, and size selectable from the tray.
-- **Steam Controller input** — two-finger trackpad typing with hit-target expansion and debounce, DPAD/stick navigation, auto-repeat on held keys, configurable insert control (bumpers or triggers), Lift-Off Typing (insert on finger release), hover-to-open accented variants while Lift-Off Typing is on (rest a finger on a key for ~1.2 s — the key fills in, then slide to an accent), six selectable key layouts (language boards inject their symbols as characters, so they type true on any Windows input language).
+- **Steam Controller input** — two-finger trackpad typing with hit-target expansion and debounce, DPAD/stick navigation, auto-repeat on held keys, configurable insert control (bumpers or triggers), Lift-Off Typing (insert on finger release), hover-to-open accented variants while Lift-Off Typing is on (rest a finger on a key for half a second, then slide to an accent; click-hold opens the same row), six selectable key layouts (language boards inject their symbols as characters, so they type true on any Windows input language).
 - **Steam Input coexistence** — reads the shared HID alongside Steam Input, switches to a keyboard layer via `steam://forceinputappid`, and restores your config on close.
 - **Opens with a chord** — Steam + X/Y/A/B (configurable) opens the keyboard; Steam's own menu is suppressed via a Guide Button Chord dead-binding.
 - **Per-app memory** — remembers the OSK size, skin, and position per foreground app.

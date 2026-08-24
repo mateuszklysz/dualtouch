@@ -236,19 +236,29 @@ def test_diacritic_session_is_reset_by_reset_session():
 
 def test_diacritic_config_survives_reset_and_snapshots():
     state.reset_session()
-    state.set_diacritic_variants({"de": {"a": ["ä"]}})
-    state.set_active_locale("de")
-    state.set_diacritics_enabled(False)
-    # Config is session-independent: reset_session must NOT wipe it (the tray
-    # re-publishes at startup, but it must also survive in-session resets).
-    state.reset_session()
-    assert state.get_diacritic_variants() == {"de": {"a": ["ä"]}}
-    assert state.get_active_locale() == "de"
-    assert state.is_diacritics_enabled() is False
-    # The setter snapshots the caller's dict - later mutation must not leak in.
-    m = {"fr": {"e": ["é", "è"]}}
-    state.set_diacritic_variants(m)
-    m["fr"]["e"].append("ê")
-    assert state.get_diacritic_variants() == {"fr": {"e": ["é", "è"]}}
-    state.set_diacritics_enabled(True)
+    # The variants map and locale are session-independent globals — snapshot
+    # them so this test can't pollute other modules' diacritic tests.
+    saved_variants = state.get_diacritic_variants()
+    saved_locale = state.get_active_locale()
+    try:
+        state.set_diacritic_variants({"de": {"a": ["ä"]}})
+        state.set_active_locale("de")
+        state.set_diacritics_enabled(False)
+        # Config is session-independent: reset_session must NOT wipe it (the
+        # tray re-publishes at startup, but it must also survive in-session
+        # resets).
+        state.reset_session()
+        assert state.get_diacritic_variants() == {"de": {"a": ["ä"]}}
+        assert state.get_active_locale() == "de"
+        assert state.is_diacritics_enabled() is False
+        # The setter snapshots the caller's dict - later mutation must not
+        # leak in.
+        m = {"fr": {"e": ["é", "è"]}}
+        state.set_diacritic_variants(m)
+        m["fr"]["e"].append("ê")
+        assert state.get_diacritic_variants() == {"fr": {"e": ["é", "è"]}}
+    finally:
+        state.set_diacritic_variants(saved_variants)
+        state.set_active_locale(saved_locale)
+        state.set_diacritics_enabled(True)
     assert state.is_diacritics_enabled() is True

@@ -98,13 +98,15 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         triton_state.set_split_layout(
             bool(self.settings.get("osk_split_layout", False))
         )
-        # Keyboard layout (tray "Keyboard Layout" radio): normalize against
-        # the bundled layouts, then publish so the next OSK open builds it
-        # (main() re-runs load_kb_config every open).
-        if self.settings.get("osk_layout") not in (
-            triton_layouts.available_layouts()
-        ):
-            self.settings["osk_layout"] = triton_layouts.DEFAULT_LAYOUT
+        # Keyboard layout (tray "Keyboard Layout" radio): canonicalize the
+        # stored name against the registry (case-insensitive, user-added
+        # boards included), falling back to QWERTY when nothing matches;
+        # publish so the next OSK open builds it (main() re-runs
+        # load_kb_config every open).
+        self.settings["osk_layout"] = (
+            triton_layouts.normalize_layout_name(self.settings.get("osk_layout"))
+            or triton_layouts.DEFAULT_LAYOUT
+        )
         triton_state.set_kb_layout(self.settings["osk_layout"])
         # Lift-off typing: insert the key under the pointer when the finger
         # leaves the pad (Steam Controller submenu toggle).

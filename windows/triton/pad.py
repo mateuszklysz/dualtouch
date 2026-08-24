@@ -116,18 +116,19 @@ class _PadMixin:
     # `now > 0` convention of the settle window — harness calls with now=0
     # bypass the duration gate.
     LIFTOFF_MIN_TOUCH = 0.04
-    # Seconds a real finger must rest on a variant-capable key — no click,
-    # no other session — before its diacritic row opens by itself. The
-    # renderer draws the countdown as the key "filling in" over this window.
+    # Seconds before a variant-capable key's accent row opens by HOVER:
+    # a real finger merely RESTING on the key (no click, no other session).
     # Only active while Lift-Off Typing is enabled (hover is a lift-native
-    # gesture; with clicks the press-hold path stays the entry).
-    DIACRITIC_HOVER_OPEN = 1.2
-    # Seconds a CLICKED variant-capable key must be HELD before its variant
-    # row opens (the "hold to show more letters" gesture). Uniform whether
-    # Lift-Off Typing is on or off. Only variant-capable presses arm this
-    # clock; other keys keep the shorter BACKSPACE_HOLD_DELAY so backspace
-    # rub-out cadence is unchanged.
-    DIACRITIC_HOLD_OPEN = 1.0
+    # gesture; with clicks it would fire accidentally while the pad is used
+    # as a mouse). No visual countdown — the row simply opens.
+    ACCENT_HOVER_OPEN = 0.5
+    # Seconds before a variant-capable key's accent row opens by HOLD:
+    # the key is CLICKED and held down this long ("hold to show more
+    # letters"). Kept identical to ACCENT_HOVER_OPEN so both gestures feel
+    # the same; only variant-capable presses arm this clock, other keys
+    # keep the shorter BACKSPACE_HOLD_DELAY so backspace rub-out cadence is
+    # unchanged.
+    ACCENT_HOLD_OPEN = 0.5
     # Minimum gap (s) between two "enter the key" edges on the same pad —
     # debounce/settle. A physical pad click can wobble: the force dips below
     # RELEASE and re-crosses ENGAGE within a few ms of the mechanical click's
@@ -176,7 +177,7 @@ class _PadMixin:
             self._liftoff_coord[repeat_key] = coord_frac
         elif lt_touch_was:
             # The real finger left the pad: any hover-to-open countdown dies
-            # with it (the fill is hidden too).
+            # with it.
             self._cancel_hover(repeat_key)
             clicked = self._liftoff_clicked.get(repeat_key, False)
             long_enough = now <= 0 or (
@@ -315,7 +316,6 @@ class _PadMixin:
         # arms the repeat clock; held past BACKSPACE_HOLD_DELAY it re-enters the
         # key every BACKSPACE_REPEAT. Repeat hits are tagged so the main thread
         # only acts on them over Backspace (no rumble on repeat — matches X).
-        repeat_key = int(select_button_mask)
         # Select mode (the on-screen "Select" key, iOS hold-space style): a pad
         # press landing on the Select key holds OS Shift while the press stays
         # engaged, and horizontal pad travel fires Shift+Left/Right — so holding
@@ -383,7 +383,7 @@ class _PadMixin:
                 if self._should_defer_press(coord_frac):
                     self._deferred_base[repeat_key] = coord_frac
                     self._click_repeat_at[repeat_key] = (
-                        now + self.DIACRITIC_HOLD_OPEN
+                        now + self.ACCENT_HOLD_OPEN
                     )
                 else:
                     self._click_repeat_at[repeat_key] = (
@@ -418,7 +418,7 @@ class _PadMixin:
                 # hold-to-show-accents window, lift mode on or off); other
                 # keys keep the shorter backspace-repeat cadence.
                 self._click_repeat_at[repeat_key] = now + (
-                    self.DIACRITIC_HOLD_OPEN
+                    self.ACCENT_HOLD_OPEN
                     if deferred
                     else self.BACKSPACE_HOLD_DELAY
                 )
@@ -523,24 +523,18 @@ class _PadMixin:
         return True
 
     def _cancel_hover(self, repeat_key):
-        """Drop this pad's hover-to-open countdown; hide the fill only if
-        THIS pad was the one publishing it (the other pad may be hovering)."""
-        dropped = (
-            self._hover_start.pop(repeat_key, None) is not None
-            or self._hover_rc.pop(repeat_key, None) is not None
-        )
-        if dropped:
-            state.set_hover_fill(None)
+        """Drop this pad's hover-to-open countdown."""
+        self._hover_start.pop(repeat_key, None)
+        self._hover_rc.pop(repeat_key, None)
 
     def _update_hover(self, coord_frac, repeat_key, now, click_active, touched):
         """Hover-to-open (diacritics): a real finger RESTING on a variant-
         capable key — no click activity, no other session on this pad —
-        fills that key over DIACRITIC_HOVER_OPEN seconds (the renderer draws
-        the growing bar from state.get_hover_fill) and then opens its variant
-        row. The row is marked as hover-opened so the finger's lift commits
-        the highlighted variant. Any click activity, moving to a different
-        key, or lifting cancels the countdown; the press-hold path stays
-        available as the secondary entry.
+        opens its variant row after ACCENT_HOVER_OPEN seconds. The row is
+        marked as hover-opened so the finger's lift commits the highlighted
+        variant. Any click activity, moving to a different key, or lifting
+        cancels the countdown; the press-hold path stays available as the
+        secondary entry.
 
         Gated on Lift-Off Typing: resting a finger is a lift-native gesture —
         with lift-off off the countdown never runs (and any stale one is
@@ -580,9 +574,7 @@ class _PadMixin:
             self._hover_rc[repeat_key] = rc
             start = self._hover_start[repeat_key] = now
         elapsed = now - start
-        frac = min(1.0, max(0.0, elapsed / self.DIACRITIC_HOVER_OPEN))
-        state.set_hover_fill((rc[0], rc[1], frac))
-        if elapsed >= self.DIACRITIC_HOVER_OPEN:
+        if elapsed >= self.ACCENT_HOVER_OPEN:
             self._cancel_hover(repeat_key)
             if self._try_open_diacritic(coord_frac, repeat_key):
                 self._diacritic_hover[repeat_key] = True

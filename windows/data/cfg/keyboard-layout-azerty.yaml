@@ -77,9 +77,9 @@ keys:
   - {label: "v", shifted: "V", keycode: KEY_V}
   - {label: "b", shifted: "B", keycode: KEY_B}
   - {label: "n", shifted: "N", keycode: KEY_N}
-  - {label: ",", shifted: "?", char: true, keycode: KEY_COMMA, dpad_down: 3, legacy_label_pos: true}
-  - {label: ";", shifted: ".", char: true, keycode: KEY_DOT, legacy_label_pos: true}
-  - {label: ":", shifted: "/", char: true, keycode: KEY_SLASH, legacy_label_pos: true}
+  - {label: ",", shifted: "?", char: true, keycode: KEY_M, dpad_down: 3, legacy_label_pos: true}
+  - {label: ";", shifted: ".", char: true, keycode: KEY_COMMA, legacy_label_pos: true}
+  - {label: ":", shifted: "/", char: true, keycode: KEY_DOT, legacy_label_pos: true}
   - {label: "!", shifted: "§", char: true, keycode: KEY_SLASH}
   - {label: "Select", behavior: select, keycode: KEY_SELECT, width_weight: 2.0, modifier: true, align: right, valign: bottom, outline_opacity: 0.33}
 

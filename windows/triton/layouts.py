@@ -42,6 +42,29 @@ def _cfg_dir():
     return os.path.dirname(p) if p else None
 
 
+def _extra_files():
+    """User-added keyboard-layout-*.yaml files in the cfg dir as
+    {derived display name: filename}, sorted by filename. The derivation
+    mirrors available_layouts() so both agree on the names they offer."""
+    d = _cfg_dir()
+    out = {}
+    if d:
+        try:
+            found = {
+                fn
+                for fn in os.listdir(d)
+                if fn.startswith(_PREFIX) and fn.lower().endswith(_SUFFIX)
+            }
+        except OSError:
+            found = set()
+        known = set(_LAYOUT_FILES.values())
+        for fn in sorted(found - known):
+            stem = fn[: -len(_SUFFIX)]
+            extra = stem[len(_PREFIX) :].lstrip("-_")
+            out[extra.capitalize() if extra else stem.capitalize()] = fn
+    return out
+
+
 def available_layouts():
     """Layout names with a file present in the cfg dir, display order first;
     any user-added keyboard-layout-*.yaml is appended alphabetically. Falls
@@ -56,34 +79,35 @@ def available_layouts():
         except OSError:
             pass
     out = [n for n, fn in _LAYOUT_FILES.items() if fn in found]
-    known = set(_LAYOUT_FILES.values())
-    for fn in sorted(found - known):
-        stem = fn[: -len(_SUFFIX)]
-        extra = stem[len(_PREFIX) :].lstrip("-_")
-        out.append(extra.capitalize() if extra else stem.capitalize())
+    out.extend(_extra_files())
     return out or [DEFAULT_LAYOUT]
 
 
 def layout_filename(name):
-    """Cfg filename for a layout display name; unknown names (a stale
+    """Cfg filename for a layout display name (bundled first, then
+    user-added boards by derived name); unknown names (a stale
     settings.json) fall back to the default board's file."""
     fn = _LAYOUT_FILES.get(name)
     if fn is None:
-        # Case-insensitive retry, then user-added files by derived name.
-        folded = {
-            n.casefold(): f
-            for n, f in _LAYOUT_FILES.items()
-        }
+        folded = {n.casefold(): f for n, f in _LAYOUT_FILES.items()}
+        fn = folded.get(str(name).casefold())
+    if fn is None:
+        folded = {n.casefold(): f for n, f in _extra_files().items()}
         fn = folded.get(str(name).casefold())
     return fn or _LAYOUT_FILES[DEFAULT_LAYOUT]
 
 
 def normalize_layout_name(name):
     """Canonical display name for a setting value (case-insensitive match
-    against the registry), or None when it names no bundled layout."""
+    against bundled layouts, then user-added boards), or None when it names
+    no file present in the cfg dir."""
     if not isinstance(name, str):
         return None
+    folded = str(name).casefold()
     for n in _LAYOUT_FILES:
-        if n.casefold() == name.casefold():
+        if n.casefold() == folded:
+            return n
+    for n in _extra_files():
+        if n.casefold() == folded:
             return n
     return None
