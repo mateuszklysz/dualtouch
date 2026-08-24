@@ -136,6 +136,28 @@ Quitting from the tray never dispatches the `/0` restore; if the appid
 changed another way, relaunch and open/close the keyboard once (or alt-tab)
 to make Steam re-evaluate.
 
+## Testing
+
+The OSK has a headless UI-test harness (a GdUnit4-style SceneRunner) that
+drives the real input pipeline — controller frame parsing, the pad/click
+state machines, hold-to-repeat cadence and the variant-row defer model —
+with a virtual clock, recording every key/mouse injection at the OS
+boundary. No display, Steam, or controller required:
+
+```sh
+cd windows
+python -m pytest tests -q                 # whole suite (fast, headless)
+python -m pytest tests/test_diacritic_hold.py -q   # one layer-2 module
+```
+
+Layers: pure state-machine tests (`test_nav_cursor`), synthetic-input
+injection through `ControllerManager` + the shared drain loop
+(`tests/sc_runner.py`, used by `test_typing_flow`, `test_diacritic_hold`,
+`test_pad_pointer`). CI runs the same suite on every push via
+`.github/workflows/test.yml` (JUnit XML artifact). Known OS-level
+injection quirks on real hardware (pynput/SendInput desync) are out of
+scope for this harness — those need a physical device.
+
 ## Development Notes
 
 This project was built through AI-assisted development: a human set the
