@@ -73,9 +73,15 @@ def _product_version(path):
             return None
         ptr = ctypes.c_void_p()
         n = ctypes.c_uint()
-        if not ver.VerQueryValueW(
-            buf, "\\VarFileInfo\\Translation", ctypes.byref(ptr), ctypes.byref(n)
-        ) or ptr.value is None:
+        if (
+            not ver.VerQueryValueW(
+                buf,
+                "\\VarFileInfo\\Translation",
+                ctypes.byref(ptr),
+                ctypes.byref(n),
+            )
+            or ptr.value is None
+        ):
             return None
         langid, codepage = struct.unpack_from(
             "<HH", buf, ptr.value - ctypes.addressof(buf)

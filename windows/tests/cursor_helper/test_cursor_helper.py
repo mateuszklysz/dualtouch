@@ -55,9 +55,7 @@ class _FakePsutil:
 def test_pid_is_trusted_rejects_junk(monkeypatch):
     import types
 
-    monkeypatch.setitem(
-        sys.modules, "psutil", types.ModuleType("psutil_fake")
-    )
+    monkeypatch.setitem(sys.modules, "psutil", types.ModuleType("psutil_fake"))
     monkeypatch.setitem(sys.modules, "psutil", _FakePsutil)
     assert not cursor_helper._pid_is_trusted(0)
     assert not cursor_helper._pid_is_trusted(-5)

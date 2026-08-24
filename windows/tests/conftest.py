@@ -30,3 +30,46 @@ if _TESTS not in sys.path:
 import applog  # noqa: E402 -- must import after the sys.path bootstrap above
 
 applog.set_logging_enabled(False)
+
+
+# --- SceneRunner harness fixtures (tests/sc_runner.py) ---------------
+
+import time  # noqa: E402
+from collections.abc import Iterator  # noqa: E402
+
+import pytest  # noqa: E402
+import sc_runner  # noqa: E402
+import steamcontroller.uinput as sui  # noqa: E402
+from steamcontroller import events as sc_events  # noqa: E402
+from triton import vkb as _vkb  # noqa: E402
+
+
+@pytest.fixture
+def runner(monkeypatch) -> Iterator[sc_runner.SceneRunner]:
+    """A headless OSK session with every OS-injection surface recorded.
+
+    Patches, in order, BEFORE the ControllerManager is built:
+      • time.monotonic -> VirtualClock (hold-to-repeat cadence is exact);
+      • pynput Keyboard/Mouse -> recorders (vkb.kb, manager._kb/_mouse and
+        EventMapper's own keyboard all become recording instances sharing
+        one event stream).
+    """
+    clock = sc_runner.VirtualClock()
+    monkeypatch.setattr(time, "monotonic", clock)
+    monkeypatch.setattr(sui, "Keyboard", sc_runner.RecordingKeyboard)
+    monkeypatch.setattr(sui, "Mouse", sc_runner.RecordingMouse)
+    monkeypatch.setattr(sc_events, "Keyboard", sc_runner.RecordingKeyboard)
+    monkeypatch.setattr(_vkb, "kb", sc_runner.RecordingKeyboard())
+    yield sc_runner.SceneRunner(clock)
+    state_cleanup()
+
+
+def state_cleanup():
+    """Drop hooks/flags a test may have flipped so later tests start clean."""
+    from triton import state
+
+    state.set_key_sound(None)
+    state.set_haptic_tick(None)
+    state.set_pad_click_haptic(None)
+    state.set_key_sound_enabled(False)
+    state.reset_session()

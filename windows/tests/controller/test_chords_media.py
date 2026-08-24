@@ -80,6 +80,7 @@ def test_media_volume_ramps_while_held(runner):
     runner.auto_advance = False
     runner.advance(0.02)
     runner.push(lstick=(0, -20000), buttons=btn)  # edge: one step
+
     def downs():
         return sum(
             1
@@ -89,7 +90,9 @@ def test_media_volume_ramps_while_held(runner):
 
     base = downs()
     assert base == 1
-    for _ in range(22):  # ~0.66 s held: past STICK_HOLD_DELAY (0.5 s), ramp is 21 ms
+    for _ in range(
+        22
+    ):  # ~0.66 s held: past STICK_HOLD_DELAY (0.5 s), ramp is 21 ms
         runner.advance(0.03)
         runner.push(lstick=(0, -20000), buttons=btn)
     assert downs() > base
@@ -100,9 +103,7 @@ def test_right_stick_moves_system_mouse(runner):
 
     for _ in range(12):
         runner.push(rstick=(20000, 0))
-    moves = [
-        e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"
-    ]
+    moves = [e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"]
     dxs = [e[1] for e in moves]
     assert dxs and all(d > 0 for d in dxs)  # rightward drift accumulates
 
@@ -112,9 +113,7 @@ def test_right_stick_deadzone_does_not_move_mouse(runner):
 
     for _ in range(12):
         runner.push(rstick=(3000, -3000))  # inside deadzone
-    assert not [
-        e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"
-    ]
+    assert not [e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"]
 
 
 def test_right_stick_y_axis_inverts(runner):

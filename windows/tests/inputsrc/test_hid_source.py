@@ -2,6 +2,7 @@
 (patched into inputsrc) — attach/poll/stale/facade-forwarding/teardown."""
 
 import time
+from typing import Any
 
 import pytest
 from sc_runner import make_frame
@@ -45,7 +46,7 @@ def patch_driver(monkeypatch):
     yield
 
 
-def _wait_live(src, timeout=3.0):
+def _wait_live(src, timeout=3.0) -> Any:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if src._live() is not None:

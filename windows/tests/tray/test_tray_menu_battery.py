@@ -1,6 +1,7 @@
 """Layer 1/2: tray battery notification matrix + menu wiring smoke."""
 
 from threading import Event
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,6 +17,9 @@ class _Batt:
 
 
 class _Host(_BatteryMixin):
+    _battery: Any
+    _current_sc: Any
+
     def __init__(self):
         self._stop_event = Event()
         self._battery = None
@@ -102,9 +106,7 @@ def test_charging_never_warns_and_puck_suppresses_charged_toast(
     import steamcontroller as sc
 
     wired = sc.PRODUCT_ID_WIRED
-    monkeypatch.setattr(
-        sc, "present_product_ids", lambda: {wired}, False
-    )
+    monkeypatch.setattr(sc, "present_product_ids", lambda: {wired}, False)
     h = _Host()
     h._battery_notifications(_Batt(10, True))
     h._battery_notifications(_Batt(12, True))

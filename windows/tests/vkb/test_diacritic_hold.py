@@ -6,9 +6,7 @@ import pytest
 from steamcontroller import SCButtons
 from triton import diacritics, state
 
-_EN_A = diacritics.lookup_variants(
-    diacritics.DIACRITIC_VARIANTS, "en", "a"
-)
+_EN_A = diacritics.lookup_variants(diacritics.DIACRITIC_VARIANTS, "en", "a")
 
 
 @pytest.fixture
@@ -72,6 +70,7 @@ def test_hold_with_finger_off_strip_defaults_to_first(runner, en_a):
 def test_finger_x_picks_variant_on_release(runner, en_a):
     _hold_open_row(runner)
     rect = state.get_diacritic_rect()
+    assert rect is not None  # the row was just opened
     n = state.get_diacritic_variant_count()
     slot = 2
     px = rect[0] + rect[2] * (slot + 0.5) / n

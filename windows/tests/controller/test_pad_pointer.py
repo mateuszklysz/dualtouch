@@ -27,9 +27,7 @@ def test_settle_window_swallows_force_wobble(runner):
     letter = next(
         lbl
         for lbl in ("q", "w", "p", "y")
-        if diacritics.lookup_variants(
-            diacritics.DIACRITIC_VARIANTS, "en", lbl
-        )
+        if diacritics.lookup_variants(diacritics.DIACRITIC_VARIANTS, "en", lbl)
         is None
     )
     pos = runner.raw_at_cell(letter)
@@ -65,9 +63,7 @@ def test_pad_force_click_path_inserts(runner):
     letter = next(
         lbl
         for lbl in ("q", "w", "p", "y")
-        if diacritics.lookup_variants(
-            diacritics.DIACRITIC_VARIANTS, "en", lbl
-        )
+        if diacritics.lookup_variants(diacritics.DIACRITIC_VARIANTS, "en", lbl)
         is None
     )
     pos = runner.raw_at_cell(letter)

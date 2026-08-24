@@ -11,11 +11,7 @@ def _select_pos(runner):
 
 
 def _arrows(runner, name):
-    return [
-        ev
-        for ev in runner.events()
-        if ev[0] == "down" and ev[1] == name
-    ]
+    return [ev for ev in runner.events() if ev[0] == "down" and ev[1] == name]
 
 
 def test_click_on_select_enters_select_mode(runner):
@@ -35,16 +31,12 @@ def test_select_drag_fires_arrows_1to1(runner):
     # Drag right one SELECT_DRAG_STEP (0x1000) in 2 k frames.
     for i in range(1, 5):
         kw = {"lpad": (x + i * 0x400, 0)}
-        runner.push(
-            buttons=SCButtons.LB | SCButtons.LPADTOUCH, **kw
-        )
+        runner.push(buttons=SCButtons.LB | SCButtons.LPADTOUCH, **kw)
     rights = len(_arrows(runner, "KEY_RIGHT"))
     assert rights == 1  # 0x1000 of travel exactly
     for i in range(5, 9):  # another full step
         kw = {"lpad": (x + i * 0x400, 0)}
-        runner.push(
-            buttons=SCButtons.LB | SCButtons.LPADTOUCH, **kw
-        )
+        runner.push(buttons=SCButtons.LB | SCButtons.LPADTOUCH, **kw)
     assert len(_arrows(runner, "KEY_RIGHT")) == 2
 
 

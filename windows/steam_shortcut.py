@@ -842,9 +842,7 @@ _CHORD_APPID_DIR = "443510"  # Steam's Guide Button Chord config appid
 _CHORD_FILENAME = "controller_triton.vdf"
 # Steam's shipped chord template, used to create the per-user config on PCs
 # where Steam never autosaved one (a fresh install falls back to this file).
-_CHORD_BASE_TEMPLATE = os.path.join(
-    "controller_base", "chord_triton.vdf"
-)
+_CHORD_BASE_TEMPLATE = os.path.join("controller_base", "chord_triton.vdf")
 
 # Guide-chord button slot name -> Steam input key in the four_buttons group.
 _CHORD_SLOTS = {
@@ -1164,19 +1162,19 @@ def _insert_chord_slot(text, slot):
             return None
         block = (
             "\n"
-            '\t\t\t"{slot}"\n'
-            "\t\t\t{{\n"
+            f'\t\t\t"{slot}"\n'
+            "\t\t\t{\n"
             '\t\t\t\t"activators"\n'
-            "\t\t\t\t{{\n"
+            "\t\t\t\t{\n"
             '\t\t\t\t\t"Full_Press"\n'
-            "\t\t\t\t\t{{\n"
+            "\t\t\t\t\t{\n"
             '\t\t\t\t\t\t"bindings"\n'
-            "\t\t\t\t\t\t{{\n"
+            "\t\t\t\t\t\t{\n"
             '\t\t\t\t\t\t\t"binding"\t\t"controller_action empty_binding"\n'
-            "\t\t\t\t\t\t}}\n"
-            "\t\t\t\t\t}}\n"
-            "\t\t\t\t}}\n"
-            "\t\t\t}}".format(slot=slot)
+            "\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t}\n"
+            "\t\t\t\t}\n"
+            "\t\t\t}"
         )
         return text[:at] + block + text[at:]
     return None
@@ -1220,8 +1218,8 @@ def _ensure_chord_config(steam_path, path, slot):
             return False
         nl = text.find("\n", idx)
         header = (
-            "\t\"progenitor\"\t\t\"local://controller_base/chord_triton.vdf\"\n"
-            "\t\"url\"\t\t\"autosave://" + path + "\"\n"
+            '\t"progenitor"\t\t"local://controller_base/chord_triton.vdf"\n'
+            '\t"url"\t\t"autosave://' + path + '"\n'
         )
         text = text[: nl + 1] + header + text[nl + 1 :]
         created = True
@@ -1251,7 +1249,9 @@ def _ensure_chord_config(steam_path, path, slot):
     if modified:
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+            fd, tmp = tempfile.mkstemp(
+                dir=os.path.dirname(path), suffix=".tmp"
+            )
             try:
                 with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
                     f.write(text)

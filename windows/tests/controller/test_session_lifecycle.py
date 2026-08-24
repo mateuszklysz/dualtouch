@@ -22,9 +22,7 @@ def _seed_pointers(cstate):
 
     center = CoordFraction.from_absolute(643, 184)
     idle = VirtualPointer(_st.InputState.INACTIVE, center)
-    cstate.set_pointers(
-        idle, VirtualPointer(_st.InputState.INACTIVE, center)
-    )
+    cstate.set_pointers(idle, VirtualPointer(_st.InputState.INACTIVE, center))
 
 
 def test_update_ignores_non_input_status(runner):
@@ -49,9 +47,7 @@ def test_first_frame_only_guards_pads(runner):
     m = controller.ControllerManager(runner.cstate)
     aim = runner.raw_at_cell("j")
     # Frame 1: aimed at 'j', but the pad section is skipped.
-    controller.update(
-        runner.src, sc_make_frame(0, aim), m
-    )
+    controller.update(runner.src, sc_make_frame(0, aim), m)
     x, y = runner.cstate.get_pointers()[0].coord_frac.to_absolute()
     seeded = CoordFraction.from_absolute(643, 184).to_absolute()
     assert (round(x), round(y)) == (round(seeded[0]), round(seeded[1]))
@@ -115,22 +111,15 @@ def test_release_held_drops_everything_os_side(runner):
     m._mouse_r_active = True  # holds LEFT button (swapped)
     m._select_pad = int(SCButtons.LT)
     state.set_select_active(True)
-    m._deferred_base[int(SCButtons.LT)] = CoordFraction.from_absolute(
-        10, 10
-    )
+    m._deferred_base[int(SCButtons.LT)] = CoordFraction.from_absolute(10, 10)
     m._a_deferred_cell = (3, 1)
 
     m.release_held()
 
-    ups = {
-        ev[1] for ev in sc_runner.RecordingKeyboard.EVENTS
-        if ev[0] == "up"
-    }
+    ups = {ev[1] for ev in sc_runner.RecordingKeyboard.EVENTS if ev[0] == "up"}
     assert "KEY_LEFTSHIFT" in ups  # shift + select teardown release it
     assert "KEY_ENTER" in ups
-    mouse = [
-        e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "release"
-    ]
+    mouse = [e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "release"]
     assert ("release", "right") in mouse
     assert ("release", "left") in mouse
     assert not m._shift_active and not m._enter_active
@@ -169,9 +158,7 @@ def test_rumble_and_sound_flags_gate_feedback(runner):
     assert runner.sounds == 0
 
 
-@pytest.mark.parametrize(
-    "w,h", [(1286, 369), (1920, 540), (900, 300)]
-)
+@pytest.mark.parametrize("w,h", [(1286, 369), (1920, 540), (900, 300)])
 def test_screen_dims_sync_geometry(w, h):
     try:
         set_dims(w, h)

@@ -1,4 +1,4 @@
-﻿"""SceneRunner — GdUnit4-style scene runner for the DualTouch OSK.
+"""SceneRunner — GdUnit4-style scene runner for the DualTouch OSK.
 
 Drives the REAL production pipeline headlessly: every pushed frame flows
 through controller.update() -> ControllerManager.handle_input() and then
@@ -11,7 +11,6 @@ Layers built on this module:
   • Layer 1 — pure state-machine tests (vkb.step_cursor etc.), no runner.
   • Layer 2 — synthetic input injection through SceneRunner (this file).
 """
-
 
 import steamcontroller.uinput as sui
 from steamcontroller import (
@@ -32,7 +31,7 @@ _X_SCALE = 0x20000 / (6 / 5)
 _Y_SCALE = -0x10000 / (6 / 5)
 
 
-def raw_for_px(px, py, center_fraction_x=1 / 4):
+def raw_for_px(px, py, center_fraction_x=1 / 4) -> tuple[int, int]:
     """Raw lpad_x/lpad_y values whose pointer lands on pixel (px, py)."""
     return (
         int(round(((px / screen.width) - center_fraction_x) * _X_SCALE)),
@@ -369,7 +368,7 @@ class SceneRunner:
         rx, ry = raw_for_px(px, py, cfx)
         return {"lpad": (rx, ry)} if side == "left" else {"rpad": (rx, ry)}
 
-    def _raw_at_px(self, px, py):
+    def _raw_at_px(self, px, py) -> dict:
         """Left-pad raw values landing the pointer on an absolute pixel."""
         return {"lpad": raw_for_px(px, py)}
 

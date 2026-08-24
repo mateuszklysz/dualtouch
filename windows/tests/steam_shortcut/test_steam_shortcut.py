@@ -328,9 +328,13 @@ def fake_chord(tmpdir, monkeypatch):
     )
     # Isolate the state file from the real %APPDATA% one.
     monkeypatch.setattr(
-        "steam_shortcut.state_path", lambda: os.path.join(str(tmpdir), "state.json")
+        "steam_shortcut.state_path",
+        lambda: os.path.join(str(tmpdir), "state.json"),
     )
-    assert os.path.join("controller_base", "chord_triton.vdf") == _CHORD_BASE_TEMPLATE
+    assert (
+        os.path.join("controller_base", "chord_triton.vdf")
+        == _CHORD_BASE_TEMPLATE
+    )
     return steam, ud, target
 
 
@@ -344,7 +348,7 @@ def test_block_creates_per_user_config_when_missing(fake_chord):
         text = f.read()
     assert _braces_balanced(text)
     # The autosave header Steam writes for per-user configs.
-    assert 'progenitor' in text and 'autosave://' in text
+    assert "progenitor" in text and "autosave://" in text
     # The dead binding landed in the X slot (X blocks the Steam menu).
     assert '"controller_action empty_binding"' in text
     assert '"controller_action SHOW_KEYBOARD"' not in text

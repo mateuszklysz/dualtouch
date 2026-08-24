@@ -86,10 +86,10 @@ def test_install_helper_schedules_task_and_kicks_daemon(
     cmd = create[0]
     assert cmd[cmd.index("/TN") + 1] == "DualTouchCursor"
     tr = cmd[cmd.index("/TR") + 1]
-    if sys.frozen if hasattr(sys, "frozen") else False:
+    if getattr(sys, "frozen", False):
         assert "--cursor-helper --daemon --token" in tr
     else:
-        assert "cursor_helper.py\" --daemon --token" in tr
+        assert 'cursor_helper.py" --daemon --token' in tr
     assert cursor_ctrl._TOKEN in tr
     # The show marker is written so the daemon's first poll has work.
     assert _marker(_data_dir).exists()

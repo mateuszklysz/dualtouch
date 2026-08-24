@@ -54,9 +54,7 @@ def test_frame_has_activity_counts_analog_trigger_pull():
 
 
 def test_merge_inputs_or_and_max():
-    a = _frame(
-        buttons=SCButtons.A, ltrig=100, lpad=(10, 20), lstick=(500, 0)
-    )
+    a = _frame(buttons=SCButtons.A, ltrig=100, lpad=(10, 20), lstick=(500, 0))
     b = _frame(
         buttons=SCButtons.B,
         ltrig=300,
@@ -76,9 +74,7 @@ def test_merge_inputs_or_and_max():
 def test_merge_inputs_touch_priority():
     # b touches the left pad while a doesn't -> b's pad coords win.
     a = _frame(lpad=(111, 222))
-    b = _frame(
-        buttons=SCButtons.LPADTOUCH, lpad=(-1, -2)
-    )
+    b = _frame(buttons=SCButtons.LPADTOUCH, lpad=(-1, -2))
     m = inputsrc.merge_inputs(a, b)
     assert (m.lpad_x, m.lpad_y) == (-1, -2)
     # Both touching -> a wins ("a" is the tuned SC source by convention).
@@ -116,9 +112,7 @@ class _FakeSrc:
 
 def test_merger_polls_merges_and_routes_haptics(monkeypatch):
     clock_t = 1000.0
-    monkeypatch.setattr(
-        time, "monotonic", lambda: clock_t
-    )
+    monkeypatch.setattr(time, "monotonic", lambda: clock_t)
     merger = inputsrc.InputMerger()
     quiet = _FakeSrc()
     loud = _FakeSrc(frames=[_frame(buttons=SCButtons.X)])
@@ -138,9 +132,7 @@ def test_merger_polls_merges_and_routes_haptics(monkeypatch):
     assert quiet.calls == []
 
     # Past the activity window the fan-out falls back to every source.
-    monkeypatch.setattr(
-        time, "monotonic", lambda: clock_t + 2.0
-    )
+    monkeypatch.setattr(time, "monotonic", lambda: clock_t + 2.0)
     merger.haptic_click()
     assert ("click",) in quiet.calls
 

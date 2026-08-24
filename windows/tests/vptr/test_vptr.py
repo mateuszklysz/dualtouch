@@ -1,6 +1,5 @@
 """Layer 1: VirtualPointer smoothing semantics (the pad-pointer low-pass)."""
 
-
 from triton import state
 from triton.geometry import CoordFraction
 from triton.vptr import VirtualPointer
