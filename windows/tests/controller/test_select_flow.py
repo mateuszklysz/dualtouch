@@ -1,4 +1,4 @@
-"""Layer 2: the Select-key text-selection session at SceneRunner level —
+"""Layer 2: the Select-key text-selection session at OskSim level —
 enter via pad click, drag arrows, freeze on finger-lift, roll-back
 cancel on release, and clean teardown."""
 

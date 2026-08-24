@@ -13,7 +13,7 @@ class _FakeSC:
 
 
 def _frame(buttons, status=66):
-    from sc_runner import make_frame as _mf
+    from osk_sim import make_frame as _mf
 
     return _mf(buttons=buttons)._replace(status=status)
 

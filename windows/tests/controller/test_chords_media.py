@@ -99,27 +99,27 @@ def test_media_volume_ramps_while_held(runner):
 
 
 def test_right_stick_moves_system_mouse(runner):
-    import sc_runner
+    import osk_sim
 
     for _ in range(12):
         runner.push(rstick=(20000, 0))
-    moves = [e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"]
+    moves = [e for e in osk_sim.RecordingMouse.EVENTS if e[0] == "move"]
     dxs = [e[1] for e in moves]
     assert dxs and all(d > 0 for d in dxs)  # rightward drift accumulates
 
 
 def test_right_stick_deadzone_does_not_move_mouse(runner):
-    import sc_runner
+    import osk_sim
 
     for _ in range(12):
         runner.push(rstick=(3000, -3000))  # inside deadzone
-    assert not [e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"]
+    assert not [e for e in osk_sim.RecordingMouse.EVENTS if e[0] == "move"]
 
 
 def test_right_stick_y_axis_inverts(runner):
-    import sc_runner
+    import osk_sim
 
     for _ in range(12):
         runner.push(rstick=(0, 20000))  # stick up
-    dys = [e[2] for e in sc_runner.RecordingMouse.EVENTS if e[0] == "move"]
+    dys = [e[2] for e in osk_sim.RecordingMouse.EVENTS if e[0] == "move"]
     assert dys and all(d < 0 for d in dys)  # screen y shrinks

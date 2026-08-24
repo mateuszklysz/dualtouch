@@ -5,7 +5,7 @@ import time
 from typing import Any
 
 import pytest
-from sc_runner import make_frame
+from osk_sim import make_frame
 from triton import inputsrc, state
 
 

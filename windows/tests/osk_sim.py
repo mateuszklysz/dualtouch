@@ -1,4 +1,4 @@
-"""SceneRunner — GdUnit4-style scene runner for the DualTouch OSK.
+"""OskSim — scene runner for the DualTouch OSK.
 
 Drives the REAL production pipeline headlessly: every pushed frame flows
 through controller.update() -> ControllerManager.handle_input() and then
@@ -9,7 +9,7 @@ the OS boundary without touching the real desktop.
 
 Layers built on this module:
   • Layer 1 — pure state-machine tests (vkb.step_cursor etc.), no runner.
-  • Layer 2 — synthetic input injection through SceneRunner (this file).
+  • Layer 2 — synthetic input injection through OskSim (this file).
 """
 
 import steamcontroller.uinput as sui
@@ -223,7 +223,7 @@ def make_frame(
     )
 
 
-class SceneRunner:
+class OskSim:
     """One headless OSK session driven frame-by-frame."""
 
     def __init__(self, clock=None):

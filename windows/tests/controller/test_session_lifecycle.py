@@ -11,7 +11,7 @@ from triton.triton import drain_input_work
 
 
 def _raw_frame(status):
-    from sc_runner import make_frame
+    from osk_sim import make_frame
 
     return make_frame(buttons=SCButtons.A)._replace(status=status)
 
@@ -60,7 +60,7 @@ def test_first_frame_only_guards_pads(runner):
 
 
 def sc_make_frame(_buttons, kw):
-    from sc_runner import make_frame
+    from osk_sim import make_frame
 
     return make_frame(**kw)
 
@@ -100,7 +100,7 @@ def test_reopen_drains_stale_click_queue():
 
 
 def test_release_held_drops_everything_os_side(runner):
-    import sc_runner
+    import osk_sim
 
     m = runner.manager
 
@@ -116,10 +116,10 @@ def test_release_held_drops_everything_os_side(runner):
 
     m.release_held()
 
-    ups = {ev[1] for ev in sc_runner.RecordingKeyboard.EVENTS if ev[0] == "up"}
+    ups = {ev[1] for ev in osk_sim.RecordingKeyboard.EVENTS if ev[0] == "up"}
     assert "KEY_LEFTSHIFT" in ups  # shift + select teardown release it
     assert "KEY_ENTER" in ups
-    mouse = [e for e in sc_runner.RecordingMouse.EVENTS if e[0] == "release"]
+    mouse = [e for e in osk_sim.RecordingMouse.EVENTS if e[0] == "release"]
     assert ("release", "right") in mouse
     assert ("release", "left") in mouse
     assert not m._shift_active and not m._enter_active

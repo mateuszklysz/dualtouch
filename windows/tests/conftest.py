@@ -18,7 +18,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 # Tests live in per-module subdirs (tests/<module>/...), so pytest's
 # per-file sys.path insertion no longer exposes tests/ itself — add it
-# explicitly for the shared harness lib (sc_runner).
+# explicitly for the shared harness lib (osk_sim).
 _TESTS = os.path.dirname(os.path.abspath(__file__))
 if _TESTS not in sys.path:
     sys.path.insert(0, _TESTS)
@@ -32,20 +32,20 @@ import applog  # noqa: E402 -- must import after the sys.path bootstrap above
 applog.set_logging_enabled(False)
 
 
-# --- SceneRunner harness fixtures (tests/sc_runner.py) ---------------
+# --- OskSim harness fixtures (tests/osk_sim.py) ---------------
 
 import time  # noqa: E402
 from collections.abc import Iterator  # noqa: E402
 
+import osk_sim  # noqa: E402
 import pytest  # noqa: E402
-import sc_runner  # noqa: E402
 import steamcontroller.uinput as sui  # noqa: E402
 from steamcontroller import events as sc_events  # noqa: E402
 from triton import vkb as _vkb  # noqa: E402
 
 
 @pytest.fixture
-def runner(monkeypatch) -> Iterator[sc_runner.SceneRunner]:
+def runner(monkeypatch) -> Iterator[osk_sim.OskSim]:
     """A headless OSK session with every OS-injection surface recorded.
 
     Patches, in order, BEFORE the ControllerManager is built:
@@ -54,13 +54,13 @@ def runner(monkeypatch) -> Iterator[sc_runner.SceneRunner]:
         EventMapper's own keyboard all become recording instances sharing
         one event stream).
     """
-    clock = sc_runner.VirtualClock()
+    clock = osk_sim.VirtualClock()
     monkeypatch.setattr(time, "monotonic", clock)
-    monkeypatch.setattr(sui, "Keyboard", sc_runner.RecordingKeyboard)
-    monkeypatch.setattr(sui, "Mouse", sc_runner.RecordingMouse)
-    monkeypatch.setattr(sc_events, "Keyboard", sc_runner.RecordingKeyboard)
-    monkeypatch.setattr(_vkb, "kb", sc_runner.RecordingKeyboard())
-    yield sc_runner.SceneRunner(clock)
+    monkeypatch.setattr(sui, "Keyboard", osk_sim.RecordingKeyboard)
+    monkeypatch.setattr(sui, "Mouse", osk_sim.RecordingMouse)
+    monkeypatch.setattr(sc_events, "Keyboard", osk_sim.RecordingKeyboard)
+    monkeypatch.setattr(_vkb, "kb", osk_sim.RecordingKeyboard())
+    yield osk_sim.OskSim(clock)
     state_cleanup()
 
 
