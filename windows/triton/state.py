@@ -965,6 +965,44 @@ def is_split_layout_enabled():
         return _split_layout
 
 
+# Keyboard layout selection (settings.json "osk_layout", tray "Keyboard
+# Layout" radio): which bundled key layout (see triton/layouts.py) the OSK
+# builds at open. Session-independent config - deliberately NOT reset by
+# reset_session(). Published by the tray; read by triton.load_kb_config().
+_kb_layout = None
+_kb_layout_lock = Lock()
+
+
+def set_kb_layout(name):
+    global _kb_layout
+    with _kb_layout_lock:
+        _kb_layout = name
+
+
+def get_kb_layout():
+    with _kb_layout_lock:
+        return _kb_layout
+
+
+# Lift-off typing (settings.json "sc_liftoff_enter", tray "Steam Controller ->
+# Lift-Off Typing"): insert the key under the pointer when the finger LIFTS
+# off the trackpad, instead of requiring a pad press / click button. Shared
+# sc_* lock with the other SC toggles; read per-frame by pad._PadMixin.
+# Session-independent config.
+_sc_liftoff_enter = False
+
+
+def set_sc_liftoff_enter(enabled):
+    global _sc_liftoff_enter
+    with _sc_lock:
+        _sc_liftoff_enter = bool(enabled)
+
+
+def is_sc_liftoff_enabled():
+    with _sc_lock:
+        return _sc_liftoff_enter
+
+
 def key_sound_tick():
     """Fire the registered key-press sound hook on every dispatched key.
     Gated by the key-sound enabled flag; NOT silenced while Steam runs (see

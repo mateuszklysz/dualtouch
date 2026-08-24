@@ -31,7 +31,9 @@ import sys
 from ctypes import wintypes
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-ENTRY = os.path.join("tray", "__main__.py")
+# Compile the package itself (never tray/__main__.py) in -m package mode,
+# so the frozen program runs exactly like the documented `python -m tray`.
+ENTRY = "tray"
 OUTPUT_NAME = "DualTouch-windows"
 HELPER_EXE_NAME = "DualTouch-cursor-helper.exe"
 DIST_DIR = os.path.join(PROJECT_DIR, "dist")
@@ -45,20 +47,29 @@ INSTALLER_DIR = os.path.join(PROJECT_DIR, "installer")
 ISS_PATH = os.path.join(INSTALLER_DIR, "DualTouch.iss")
 
 
-def _app_version():
-    """Latest git tag (v-prefixed tags welcome) as the exe version, or 0.0.0
-    when building outside a tagged checkout (CI uses fetch-depth: 0)."""
+def _latest_git_tag():
+    """Latest tag reachable from HEAD ('' when unavailable), v-prefix kept."""
     try:
-        tag = subprocess.check_output(
+        return subprocess.check_output(
             ["git", "describe", "--tags", "--abbrev=0"],
             cwd=PROJECT_DIR,
             text=True,
             stderr=subprocess.DEVNULL,
         ).strip()
     except Exception:
-        return "0.0.0"
-    m = re.match(r"v?(\d[\w.\-]*)", tag)
-    return m.group(1) if m else "0.0.0"
+        return ""
+
+
+def _app_version():
+    """The exe/installer version. Precedence: the DUALTOUCH_VERSION env var
+    (CI forwards the pushed tag's ref name there), then the latest reachable
+    git tag; "latest" when neither yields a version-looking string (untagged
+    local builds)."""
+    for candidate in (os.environ.get("DUALTOUCH_VERSION"), _latest_git_tag()):
+        m = re.match(r"v?(\d[\w.\-]*)", (candidate or "").strip())
+        if m:
+            return m.group(1)
+    return "latest"
 
 
 def _preflight():
@@ -379,6 +390,11 @@ def _run_nuitka():
         "--include-module=pynput.mouse._win32",
         "--include-module=PIL._tkinter_finder",
         "--include-package=sdl3w",
+        # Our local `triton` package collides with the ML 'triton' PyPI
+        # package in anti-bloat's eyes ("undesirable import"); allow it so
+        # every import of our own code compiles without warnings.
+        "--noinclude-custom-mode=triton:allow",
+        "--python-flag=-m",
         ENTRY,
     ]
     print("running:", " ".join(cmd))

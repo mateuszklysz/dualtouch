@@ -4,6 +4,6 @@ What does this PR do?
 
 ## Screenshots
 
-## Manual verification
+## Added test coverage
 
-What did you test on hardware? (Steam Controller chord open/close, touchpad typing, split layout, touchscreen taps, tray toggles.)
+Which behaviors got new/updated headless tests? (pytest suite, `python -m pytest tests -q`.)

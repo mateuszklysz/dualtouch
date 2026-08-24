@@ -224,6 +224,14 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         # by the row). Cleared on release / teardown so a held pad press never
         # leaks a base insert across presses.
         self._deferred_base = {}
+        # Per-pad lift-off typing trackers (see pad._PadMixin): last real-touch
+        # edge, the coordinate to insert on lift, whether click activity
+        # consumed the current touch, and the touch start time. Keyed like
+        # _click_repeat_at by the select-button mask.
+        self._liftoff_touch = {}
+        self._liftoff_coord = {}
+        self._liftoff_clicked = {}
+        self._liftoff_t0 = {}
         # LT's role is decided on its rising edge from whether the left pad was
         # being touched: "shift" (pressed untouched) or "click" (pressed while
         # touching). Latched until LT is released so a later touch can't flip it.
@@ -616,7 +624,13 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
                 state.key_sound_tick()
             else:
                 state.queue_key_press(a_row, a_col)
-            self._a_repeat_at = now + self.BACKSPACE_HOLD_DELAY
+            # Variant-capable cells use the same 0.5 s accent window as the
+            # pad hold; plain keys keep the backspace rub-out clock.
+            self._a_repeat_at = now + (
+                self.ACCENT_HOLD_OPEN
+                if self._a_deferred_cell is not None
+                else self.BACKSPACE_HOLD_DELAY
+            )
         elif a_pressed and now >= self._a_repeat_at:
             state.queue_key_press(a_row, a_col, repeat=True)
             self._a_repeat_at = now + self.BACKSPACE_REPEAT
@@ -1042,6 +1056,12 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         # button can never leak a base insert across a teardown.
         self._deferred_base.clear()
         self._a_deferred_cell = None
+        # Reset the lift-off trackers too: a touch in flight at teardown must
+        # not insert into whatever app gains focus next.
+        self._liftoff_touch.clear()
+        self._liftoff_coord.clear()
+        self._liftoff_clicked.clear()
+        self._liftoff_t0.clear()
 
 
 def update(sc, sc_input, manager):

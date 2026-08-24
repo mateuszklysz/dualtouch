@@ -34,7 +34,7 @@ It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/S
 
 - **Global overlay** — draws above every app, not tied to Big Picture or a launcher.
 - **Native SDL3 rendering** — low CPU/memory use; skins, transparency, and size selectable from the tray.
-- **Steam Controller input** — two-finger trackpad typing with hit-target expansion and debounce, DPAD/stick navigation, auto-repeat on held keys, configurable insert control (bumpers or triggers).
+- **Steam Controller input** — two-finger trackpad typing with hit-target expansion and debounce, DPAD/stick navigation, auto-repeat on held keys, configurable insert control (bumpers or triggers), Lift-Off Typing (insert on finger release; the pad press-click then shows a key's accented variants — slide to pick, release commits), click-hold opens accent rows without Lift-Off Typing, six selectable key layouts (language boards inject their symbols as characters, so they type true on any Windows input language).
 - **Steam Input coexistence** — reads the shared HID alongside Steam Input, switches to a keyboard layer via `steam://forceinputappid`, and restores your config on close.
 - **Opens with a chord** — Steam + X/Y/A/B (configurable) opens the keyboard; Steam's own menu is suppressed via a Guide Button Chord dead-binding.
 - **Per-app memory** — remembers the OSK size, skin, and position per foreground app.
@@ -85,6 +85,8 @@ menus), or by hand-editing `settings.json` for finer control.
 | `sc_click_button` | `"L1/R1"` | Click insert per side: `"L1/R1"` (bumpers) or `"L2/R2"` (triggers) |
 | `sc_pad_click_enter` | `false` | Trackpad press-click inserts the key under the pointer |
 | `sc_pad_click_engage` | `2500` | Pad force that fires the pad-click insert |
+| `sc_liftoff_enter` | `false` | Lift-Off Typing: insert the key under the pointer when the finger lifts off the pad (no click needed); the pad press-click then opens a key's accented variants |
+| `osk_layout` | `"QWERTY"` | Key layout: `"QWERTY"`/`"AZERTY"`/`"QWERTZ"`/`"Dvorak"`/`"Colemak"`/`"ABC"` (tray "Keyboard Layout"; applied at the next open) |
 | `sc_left_stick_nav` | `true` | Sticks control the keyboard while it is open |
 | `sc_osk_trigger_actuation` | `"default"` | L2/R2 actuation point: `"default"` or `"low"` |
 | `skin` | `"Gruvbox"` | Keyboard skin: Steam OSK themes load from the Steam install; Gruvbox is the bundled original |

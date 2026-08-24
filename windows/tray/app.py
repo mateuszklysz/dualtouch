@@ -18,6 +18,7 @@ from appsettings import (
 )
 from steamcontroller import SCButtons
 from triton import diacritics
+from triton import layouts as triton_layouts
 from triton import screen as triton_screen
 from triton import skins as triton_skins
 from triton import state as triton_state
@@ -96,6 +97,23 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         # Split keyboard layout (left/right halves, one touchpad per side).
         triton_state.set_split_layout(
             bool(self.settings.get("osk_split_layout", False))
+        )
+        # Keyboard layout (tray "Keyboard Layout" radio): canonicalize the
+        # stored name against the registry (case-insensitive, user-added
+        # boards included), falling back to QWERTY when nothing matches;
+        # publish so the next OSK open builds it (main() re-runs
+        # load_kb_config every open).
+        self.settings["osk_layout"] = (
+            triton_layouts.normalize_layout_name(
+                self.settings.get("osk_layout")
+            )
+            or triton_layouts.DEFAULT_LAYOUT
+        )
+        triton_state.set_kb_layout(self.settings["osk_layout"])
+        # Lift-off typing: insert the key under the pointer when the finger
+        # leaves the pad (Steam Controller submenu toggle).
+        triton_state.set_sc_liftoff_enter(
+            bool(self.settings.get("sc_liftoff_enter", False))
         )
 
         # Trackpad press-force calibration (settings.json, hand-edited).
@@ -419,6 +437,33 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
     def is_click_button_checked(self, name):
         return lambda item: (
             self.settings.get("sc_click_button", "L1/R1") == name
+        )
+
+    def toggle_liftoff_enter(self, icon, item):
+        self.settings["sc_liftoff_enter"] = not item.checked
+        _save_settings(self.settings)
+        triton_state.set_sc_liftoff_enter(self.settings["sc_liftoff_enter"])
+        self._refresh_menu()
+
+    def is_liftoff_enter_checked(self, item):
+        return self.settings.get("sc_liftoff_enter", False)
+
+    # Keyboard layout (tray "Keyboard Layout" radio): saved to settings.json
+    # and published immediately; the OSK picks it up at its next open (the
+    # VirtualKeyboard is rebuilt from the layout YAML every open).
+    def select_layout(self, name):
+        def _select(icon, item):
+            self.settings["osk_layout"] = name
+            _save_settings(self.settings)
+            triton_state.set_kb_layout(name)
+            self._refresh_menu()
+
+        return _select
+
+    def is_layout_checked(self, name):
+        return lambda item: (
+            self.settings.get("osk_layout", triton_layouts.DEFAULT_LAYOUT)
+            == name
         )
 
     # Split keyboard layout: left/right halves, each touchpad covers its own

@@ -37,6 +37,10 @@ class _PadMixin:
     sc_input_previous: _PadFrame
     _click_repeat_at: dict
     _click_settle_at: dict
+    _liftoff_touch: dict
+    _liftoff_coord: dict
+    _liftoff_clicked: dict
+    _liftoff_t0: dict
     _pad_click_engage: float
     _pad_click_release: float
     _pad_press_hold: float
@@ -79,6 +83,32 @@ class _PadMixin:
     # fresh dict by ControllerManager/__init__; this class default is only a
     # safety net for the standalone test harnesses.
     _deferred_base = {}
+    # Lift-off typing (release-to-insert) per-pad trackers, keyed by the
+    # select-button mask like every other per-pad dict: whether the real
+    # finger was on the pad last frame, the coordinate to insert on lift,
+    # whether ANY click activity happened during the current touch (a touch
+    # that already entered a key must not fire a second insert on lift), and
+    # the monotonic time the touch began. Overridden with fresh dicts by
+    # ControllerManager/__init__; these class defaults are safety nets for
+    # standalone test harnesses.
+    _liftoff_touch = {}
+    _liftoff_coord = {}
+    _liftoff_clicked = {}
+    _liftoff_t0 = {}
+    # Minimum real-finger contact (s) before a lift counts as an intentional
+    # tap: brushes past the pad on the way to/from a button are shorter than
+    # any deliberate tap (~50-120 ms) and must stay silent. Mirrors the
+    # `now > 0` convention of the settle window — harness calls with now=0
+    # bypass the duration gate.
+    LIFTOFF_MIN_TOUCH = 0.04
+    # Seconds before a variant-capable key's accent row opens by HOLD:
+    # the key is CLICKED and held down this long ("hold to show more
+    # letters"). Only variant-capable presses arm this clock, other keys
+    # keep the shorter BACKSPACE_HOLD_DELAY so backspace rub-out cadence is
+    # unchanged. With Lift-Off Typing enabled the row opens INSTANTLY on the
+    # pad press instead (the press IS the accent gesture then), so this
+    # clock only matters for lift-off-off holds.
+    ACCENT_HOLD_OPEN = 0.5
     # Minimum gap (s) between two "enter the key" edges on the same pad —
     # debounce/settle. A physical pad click can wobble: the force dips below
     # RELEASE and re-crosses ENGAGE within a few ms of the mechanical click's
@@ -111,6 +141,44 @@ class _PadMixin:
         if (not (buttons & click_button_mask)) and (prev & click_button_mask):
             state.pad_click_haptic()
         repeat_key = int(select_button_mask)
+        # Lift-off typing (release-to-insert): track the REAL finger per pad
+        # before any session routing below, so the touch's falling edge is
+        # always seen — sessions (select/diacritic/deferred) return early and
+        # would otherwise hide it. Uses `real_touch` (actual pad contact), not
+        # the synthesized touch bit, because the click button fakes touch
+        # while held. On the falling edge, when enabled and nothing else
+        # consumed this touch, queue an insert of where the finger last sat.
+        lt_touch_now = bool(real_touch)
+        lt_touch_was = self._liftoff_touch.get(repeat_key, False)
+        if lt_touch_now:
+            if not lt_touch_was:
+                self._liftoff_clicked[repeat_key] = False
+                self._liftoff_t0[repeat_key] = now
+            self._liftoff_coord[repeat_key] = coord_frac
+        elif lt_touch_was:
+            # The real finger left the pad.
+            clicked = self._liftoff_clicked.get(repeat_key, False)
+            long_enough = now <= 0 or (
+                now - self._liftoff_t0.get(repeat_key, 0.0)
+                >= self.LIFTOFF_MIN_TOUCH
+            )
+            if (
+                state.is_sc_liftoff_enabled()
+                and not clicked
+                and long_enough
+                and self._select_pad != repeat_key
+                and self._diacritic_pad != repeat_key
+                and repeat_key not in self._deferred_base
+                and coord_frac is not None
+                and self._liftoff_coord.get(repeat_key) is not None
+                and self._liftoff_resolves(self._liftoff_coord[repeat_key])
+            ):
+                self.controller_state.click_queue.append(
+                    self._liftoff_coord[repeat_key]
+                )
+                state.pad_click_haptic()
+                self._diag("liftoff insert k={}", repeat_key)
+        self._liftoff_touch[repeat_key] = lt_touch_now
         if self._select_pad == repeat_key:
             still_active = (allow_click and trigger_pressed) or bool(
                 buttons & click_button_mask
@@ -152,10 +220,10 @@ class _PadMixin:
             # lifted the gate below would return INACTIVE and the release —
             # and its commit — would never run (the row would stay latched,
             # swallowing every later press on this pad).
-            if not (
-                (allow_click and trigger_pressed)
-                or bool(buttons & click_button_mask)
-            ):
+            click_held = (allow_click and trigger_pressed) or bool(
+                buttons & click_button_mask
+            )
+            if not click_held:
                 self._end_diacritic_pad()
                 return state.InputState.INACTIVE
             # Self-heal: the row is latched to this pad but the diacritic
@@ -211,11 +279,14 @@ class _PadMixin:
         trigger_edge = trigger_held and (not touch_was or not trigger_prev)
         pad_edge = pad_clicked and not (prev & click_button_mask)
         click_active = trigger_held or pad_clicked
+        # Any click activity during this touch consumes the insert — the lift
+        # must never fire a second one behind the click path.
+        if click_active:
+            self._liftoff_clicked[repeat_key] = True
         # Hold-to-repeat, keyed per pad. First hit enters the key, rumbles, and
         # arms the repeat clock; held past BACKSPACE_HOLD_DELAY it re-enters the
         # key every BACKSPACE_REPEAT. Repeat hits are tagged so the main thread
         # only acts on them over Backspace (no rumble on repeat — matches X).
-        repeat_key = int(select_button_mask)
         # Select mode (the on-screen "Select" key, iOS hold-space style): a pad
         # press landing on the Select key holds OS Shift while the press stays
         # engaged, and horizontal pad travel fires Shift+Left/Right — so holding
@@ -243,7 +314,7 @@ class _PadMixin:
         if self._diacritic_pad == repeat_key:
             if click_active:
                 rect = state.get_diacritic_rect()
-                if rect is not None:
+                if rect is not None and coord_frac is not None:
                     px, py = coord_frac.to_absolute()
                     state.set_diacritic_index(
                         diacritics.variant_index_at_point(
@@ -278,21 +349,39 @@ class _PadMixin:
                 # settle window must not lose the base letter.
                 if self._should_defer_press(coord_frac):
                     self._deferred_base[repeat_key] = coord_frac
-                self._click_repeat_at[repeat_key] = (
-                    now + self.BACKSPACE_HOLD_DELAY
-                )
+                    self._click_repeat_at[repeat_key] = (
+                        now + self.ACCENT_HOLD_OPEN
+                    )
+                else:
+                    self._click_repeat_at[repeat_key] = (
+                        now + self.BACKSPACE_HOLD_DELAY
+                    )
             else:
                 # Defer model (Feature B): a press landing on a variant-capable
-                # letter does NOT type anything at the press edge. The hold
-                # opens its variant row (see _try_open_diacritic); the release
-                # then types either the picked variant or the base letter. A
-                # QUICK tap just types the base on release. Non-variant keys
-                # keep firing at the press edge exactly as before.
-                if self._should_defer_press(coord_frac):
-                    self._deferred_base[repeat_key] = coord_frac
-                    self._diag(
-                        "defer press k={} cf={!r}", repeat_key, coord_frac
-                    )
+                # letter does NOT type anything at the press edge. With
+                # Lift-Off Typing enabled the press IS the accent gesture: the
+                # row opens INSTANTLY (the click's release then commits the
+                # picked variant). Without lift-off, holding past the accent
+                # window opens the row instead; a quick tap types the base on
+                # release. Non-variant keys keep firing at the press edge.
+                deferred = self._should_defer_press(coord_frac)
+                opened_row = (
+                    deferred
+                    and state.is_sc_liftoff_enabled()
+                    and self._try_open_diacritic(coord_frac, repeat_key)
+                )
+                if deferred:
+                    if not opened_row:
+                        self._deferred_base[repeat_key] = coord_frac
+                        self._diag(
+                            "defer press k={} cf={!r}", repeat_key, coord_frac
+                        )
+                    else:
+                        self._diag(
+                            "lift-click accents k={} cf={!r}",
+                            repeat_key,
+                            coord_frac,
+                        )
                     # Click sound fires at the PRESS edge like any other key —
                     # the release commit types the char but must not re-tick,
                     # or a held variant pick would sound laggy.
@@ -305,8 +394,13 @@ class _PadMixin:
                         coord_frac,
                     )
                 state.pad_click_haptic()
-                self._click_repeat_at[repeat_key] = (
-                    now + self.BACKSPACE_HOLD_DELAY
+                # Variant-capable presses arm the LONG hold clock (the
+                # hold-to-show-accents window, lift mode on or off); other
+                # keys keep the shorter backspace-repeat cadence.
+                self._click_repeat_at[repeat_key] = now + (
+                    self.ACCENT_HOLD_OPEN
+                    if deferred
+                    else self.BACKSPACE_HOLD_DELAY
                 )
                 self._click_settle_at[repeat_key] = now + self.PAD_CLICK_SETTLE
         elif click_active and now >= self._click_repeat_at.get(
@@ -357,6 +451,16 @@ class _PadMixin:
             log_line("pad", msg)
         except Exception:
             pass
+
+    def _liftoff_resolves(self, coord_frac):
+        """True if the stored lift-off coordinate sits on an actual key cell
+        (expanded hit-target, same resolution as a click). Lifting the finger
+        off empty space must stay silent."""
+        kb = state.get_virtual_kb()
+        if kb is None:
+            return False
+        x, y = coord_frac.to_absolute()
+        return kb.find_key_expanded(x, y) is not None
 
     def _should_defer_press(self, coord_frac):
         """Defer model (Feature B): True if the press under the pointer should
