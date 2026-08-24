@@ -15,23 +15,41 @@ import time
 
 
 def _is_frozen():
-    return getattr(sys, "frozen", False)
+    """True when running from a compiled distribution. PyInstaller sets
+    sys.frozen; Nuitka does not — its marker is the module-level
+    __compiled__ attribute present in every module it compiles."""
+    return getattr(sys, "frozen", False) or "__compiled__" in globals()
+
+
+def _exe_path():
+    """Path of the binary the user actually launched.
+
+    Nuitka standalone reports sys.executable as '<dist>\\python.exe' even
+    though no such file exists in the output folder, so anything that
+    persists, relaunches or advertises a path must ask Windows for our own
+    process image instead (GetModuleFileNameW(NULL))."""
+    if _is_frozen():
+        import ctypes
+
+        buf = ctypes.create_unicode_buffer(1024)
+        if ctypes.windll.kernel32.GetModuleFileNameW(None, buf, 1024):
+            return os.path.normpath(buf.value)
+    return os.path.abspath(sys.executable)
 
 
 def _bundle_dir():
     """Directory containing read-only bundled resources (data/, glyphs)."""
     if _is_frozen():
-        # PyInstaller sets sys._MEIPASS at bootstrap; not in typeshed stubs.
-        return getattr(
-            sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))
-        )
+        # Compiled (Nuitka standalone) builds keep every resource next to the
+        # executable, so the exe dir IS the bundle dir.
+        return os.path.dirname(_exe_path())
     return os.path.dirname(os.path.abspath(__file__))
 
 
 def _exe_dir():
     """Directory we treat as the install location (for portable settings)."""
     if _is_frozen():
-        return os.path.dirname(os.path.abspath(sys.executable))
+        return os.path.dirname(_exe_path())
     return os.path.dirname(os.path.abspath(__file__))
 
 

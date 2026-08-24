@@ -1,7 +1,34 @@
+import os
 import sys
 
 from tray import _relaunch_elevated, main
 from tray.helpers import _create_tray_mutex, _tray_mutex_held
+
+
+def _trace_base():
+    try:
+        from applog import user_data_dir
+
+        return user_data_dir()
+    except Exception:
+        return os.path.join(
+            os.environ.get("APPDATA", os.path.expanduser("~")), "DualTouch"
+        )
+
+
+def _write_crash_log():
+    """Persist the active exception for post-mortem. A windowed exe has no
+    stderr, so without this any startup crash is completely invisible."""
+    import traceback
+
+    text = traceback.format_exc()
+    try:
+        base = _trace_base()
+        os.makedirs(base, exist_ok=True)
+        with open(os.path.join(base, "crash.log"), "a", encoding="utf-8") as f:
+            f.write(text.rstrip() + "\n\n")
+    except OSError:
+        pass
 
 
 def _run():
@@ -36,13 +63,18 @@ def _run():
             _relaunch_elevated()
             sys.exit(0)  # ALWAYS exit the parent; never run main() here
     except Exception:
-        pass
+        # A failed elevation check used to vanish silently (windowed exe);
+        # leave evidence, then keep the original fall-through behavior.
+        _write_crash_log()
 
     mutex = _create_tray_mutex()
     if mutex is None:
         sys.exit(0)  # another tray already owns the mutex
     try:
         main()
+    except BaseException:
+        _write_crash_log()
+        raise
     finally:
         import ctypes
 

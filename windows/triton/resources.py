@@ -5,7 +5,7 @@ _search_path_env_str = os.environ.get("TRITON_DATA")
 # os.pathsep, not ":" — Windows drive letters contain a colon, so splitting on
 # ":" turned "C:\...\data" into ("C", "\...\data") and the drive-relative
 # second element only worked by accident when cwd was on the same drive as
-# TRITON_DATA (it broke in the frozen exe, whose onefile temp dir is on C:).
+# TRITON_DATA (it broke in the frozen exe, whose bundle dir is on C:).
 env_search_paths = (
     tuple(_search_path_env_str.split(os.pathsep))
     if _search_path_env_str is not None

@@ -56,7 +56,12 @@ It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/S
 
 **Release build**
 
-Run `DualTouch-windows.exe` (it will request elevation on start).
+Run `DualTouch-windows.exe` from the extracted `DualTouch-windows`
+folder (it will request elevation on start) — the whole folder ships
+together, so keep all of its files side by side. The
+`DualTouch-cursor-helper.exe` next to it is the same binary under its
+cursor-helper name (so the two processes are distinguishable in Task
+Manager); keep it too.
 
 - Settings: `%APPDATA%\DualTouch\settings.json` (auto-created with defaults; a legacy file next to the exe is migrated automatically)
 - Logs: `%APPDATA%\DualTouch\dualtouch.log`
@@ -96,10 +101,23 @@ menus), or by hand-editing `settings.json` for finer control.
 
 ```sh
 cd windows
-python build.py
+python build.py               # folder distribution
+python build.py --installer   # + Windows installer (needs Inno Setup 6)
 ```
 
-Output: `windows/dist/DualTouch-windows.exe`.
+Output: `windows/dist/DualTouch-windows/` (a standalone folder
+distribution — `DualTouch-windows.exe`, the `DualTouch-cursor-helper.exe`
+copy, and everything they need; ship the whole folder together).
+
+With `--installer`, an Inno Setup 6 setup is compiled to
+`windows/dist/DualTouch-windows-setup-<version>.exe`
+([Inno Setup](https://jrsoftware.org/isdl.php) must be installed or
+`ISCC.exe` on PATH).
+
+Releases are compiled with [Nuitka](https://nuitka.net): all Python is
+turned into machine code, so the bundle contains no Python sources or
+bytecode. The first build on a machine without a C compiler auto-downloads
+MinGW and takes several minutes; later builds are faster.
 
 ## Troubleshooting
 

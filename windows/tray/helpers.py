@@ -304,6 +304,8 @@ def _relaunch_elevated():
         import ctypes
         from ctypes import wintypes
 
+        from applog import _exe_path
+
         shell32 = ctypes.windll.shell32
         shell32.ShellExecuteW.restype = wintypes.HINSTANCE
         shell32.ShellExecuteW.argtypes = [
@@ -314,9 +316,18 @@ def _relaunch_elevated():
             wintypes.LPCWSTR,
             ctypes.c_int,
         ]
-        res = shell32.ShellExecuteW(
-            None, "runas", sys.executable, " ".join(sys.argv[1:]), None, 1
-        )
+        # Frozen: relaunch the real binary (sys.executable lies under
+        # Nuitka standalone — see applog._exe_path). Source: re-run the
+        # interpreter with the tray package.
+        from applog import _is_frozen
+
+        if _is_frozen():
+            target = _exe_path()
+            params = " ".join(sys.argv[1:])
+        else:
+            target = sys.executable
+            params = (" ".join(["-m", "tray"] + sys.argv[1:])).strip()
+        res = shell32.ShellExecuteW(None, "runas", target, params, None, 1)
         return int(res) > 32
     except Exception:
         return False

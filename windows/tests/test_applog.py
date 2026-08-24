@@ -205,3 +205,31 @@ def test_parse_marker_rejects_malformed(tmpdir):
     assert ch._parse_marker(f"hide|abc|{tok}", tok) is None  # non-int pid
     assert ch._parse_marker(f"frobnicate|1234|{tok}", tok) is None
     assert ch._parse_marker(f"HIDE|1234|{tok}", tok) is None
+
+
+# --- cursor helper PID trust (renamed-helper-copy support) -------------------
+# The daemon runs from DualTouch-cursor-helper.exe while the tray runs as
+# DualTouch-windows.exe, so _pid_is_trusted must accept BOTH image names
+# (same binary, two copies), not just the helper's own basename.
+
+def test_allowed_image_names_frozen_pair(tmpdir):
+    ch = _cursor_helper(tmpdir)
+    names = ch._allowed_image_names(frozen=True)
+    assert "dualtouch-windows.exe" in names
+    assert "dualtouch-cursor-helper.exe" in names
+    assert "python.exe" not in names
+
+
+def test_allowed_image_names_source_run_is_interpreter(tmpdir):
+    ch = _cursor_helper(tmpdir)
+    names = ch._allowed_image_names(frozen=False)
+    assert os.path.basename(sys.executable).lower() in names
+
+
+def test_pid_trust_accepts_own_process(tmpdir):
+    ch = _cursor_helper(tmpdir)
+    # This test process itself (python.exe in a source checkout) must be a
+    # trusted marker owner; degenerate pids stay refused.
+    assert ch._pid_is_trusted(os.getpid()) is True
+    assert ch._pid_is_trusted(1) is False
+    assert ch._pid_is_trusted(0) is False
