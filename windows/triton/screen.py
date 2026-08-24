@@ -66,7 +66,9 @@ def resize_for_layout():
         width, height = _compute_split_size(_active_osk_size)
     else:
         width, height = _compute_size(_active_osk_size)
-    set_dims(width, height)  # keep geometry.py in sync (CoordFraction reads it)
+    set_dims(
+        width, height
+    )  # keep geometry.py in sync (CoordFraction reads it)
     return width, height
 
 
@@ -531,9 +533,7 @@ class Screen:
         S.SDL_SetRenderDrawColor(self.renderer, c.r, c.g, c.b, 255)
         S.SDL_RenderFillRect(
             self.renderer,
-            ctypes.byref(
-                S.SDL_FRect(0.0, 0.0, float(left_x), float(height))
-            ),
+            ctypes.byref(S.SDL_FRect(0.0, 0.0, float(left_x), float(height))),
         )
         S.SDL_RenderFillRect(
             self.renderer,

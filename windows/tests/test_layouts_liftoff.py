@@ -13,7 +13,6 @@ Covers:
 from collections import deque
 
 import pytest
-
 from triton import state
 from triton.layouts import (
     DEFAULT_LAYOUT,
@@ -23,7 +22,6 @@ from triton.layouts import (
 )
 from triton.pad import _PadMixin
 from triton.screen import CoordFraction
-
 
 # --- Layout registry ---------------------------------------------------------
 
@@ -72,7 +70,6 @@ def test_user_added_board_roundtrip(tmp_path, monkeypatch):
 
 def test_load_kb_config_builds_selected_layout():
     import steamcontroller.uinput as sui
-
     from triton.triton import load_kb_config
 
     def probe(name):

@@ -1,4 +1,4 @@
-﻿"""Headless tests for the Feature-B diacritic-variant logic
+"""Headless tests for the Feature-B diacritic-variant logic
 (triton/diacritics.py + the settings roundtrip).
 
 Pure logic: the per-locale variant map and its merge/lookup rules, the

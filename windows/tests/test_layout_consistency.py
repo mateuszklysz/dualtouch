@@ -19,7 +19,6 @@ rule 2, or the suite fails naming the exact key.
 
 import pytest
 import steamcontroller.uinput as sui
-
 from triton import state, vkb
 from triton.layouts import layout_filename
 
@@ -46,7 +45,7 @@ def _table(pairs):
 
 def _us_table():
     table = {}
-    for digit, shifted in zip("1234567890", "!@#$%^&*()"):
+    for digit, shifted in zip("1234567890", "!@#$%^&*()", strict=True):
         table[f"KEY_{digit}"] = (digit, shifted)
     for ch in "abcdefghijklmnopqrstuvwxyz":
         table[f"KEY_{ch.upper()}"] = (ch, ch.upper())
@@ -76,7 +75,7 @@ ALL_BOARDS = STRICT_BOARDS + ("AZERTY", "QWERTZ")
 # Native characters every board variant MUST offer (base or shifted labels)
 # — the whole point of these boards.
 AZERTY_REQUIRED = '²&é"' + "'(-è_çà)°=+^¨$£*µù%,?;.:/!§"
-QWERTZ_REQUIRED = '^°!"§$%/()=ß?´`üÜ+*#\'öÖäÄyz;,.:-_'
+QWERTZ_REQUIRED = "^°!\"§$%/()=ß?´`üÜ+*#'öÖäÄyz;,.:-_"
 
 
 def _labels(kb):
@@ -160,8 +159,7 @@ def test_strict_boards_need_neither_overrides_nor_char_mode(name):
         )
         base, shifted = pair
         assert key.str == base, (
-            f"{name}: key prints {key.str!r} but its scancode types "
-            f"{base!r}"
+            f"{name}: key prints {key.str!r} but its scancode types {base!r}"
         )
         assert key.shifted == shifted, (
             f"{name}: shift-label above {base!r} should be {shifted!r}, "
@@ -195,8 +193,9 @@ def test_char_mode_key_injects_its_label(monkeypatch):
     """The user's bug, end to end: on a machine whose OS layout has no `$`
     (VkKeyScanW misses), pressing the AZERTY `$` key still types `$` via the
     KEYEVENTF_UNICODE fallback."""
-    import applog
     import ctypes
+
+    import applog
 
     applog.set_logging_enabled(False)
 
@@ -206,9 +205,6 @@ def test_char_mode_key_injects_its_label(monkeypatch):
 
     calls = {}
     user32 = sui._U32
-    real_send = user32.SendInput
-    real_vkscan = user32.VkKeyScanW
-    real_openclip = user32.OpenClipboard
 
     def _stub_vkscan(_ch):
         return -1  # active layout has no such key -> UNICODE fallback
@@ -225,7 +221,9 @@ def test_char_mode_key_injects_its_label(monkeypatch):
         return int(n)
 
     monkeypatch.setattr(user32, "VkKeyScanW", _stub_vkscan, raising=False)
-    monkeypatch.setattr(user32, "OpenClipboard", _stub_openclipboard, raising=False)
+    monkeypatch.setattr(
+        user32, "OpenClipboard", _stub_openclipboard, raising=False
+    )
     monkeypatch.setattr(user32, "SendInput", fake_send, raising=False)
     try:
         state.reset_session()

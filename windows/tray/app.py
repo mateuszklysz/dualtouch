@@ -104,7 +104,9 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         # publish so the next OSK open builds it (main() re-runs
         # load_kb_config every open).
         self.settings["osk_layout"] = (
-            triton_layouts.normalize_layout_name(self.settings.get("osk_layout"))
+            triton_layouts.normalize_layout_name(
+                self.settings.get("osk_layout")
+            )
             or triton_layouts.DEFAULT_LAYOUT
         )
         triton_state.set_kb_layout(self.settings["osk_layout"])
@@ -440,9 +442,7 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
     def toggle_liftoff_enter(self, icon, item):
         self.settings["sc_liftoff_enter"] = not item.checked
         _save_settings(self.settings)
-        triton_state.set_sc_liftoff_enter(
-            self.settings["sc_liftoff_enter"]
-        )
+        triton_state.set_sc_liftoff_enter(self.settings["sc_liftoff_enter"])
         self._refresh_menu()
 
     def is_liftoff_enter_checked(self, item):

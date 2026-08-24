@@ -171,9 +171,7 @@ class _PadMixin:
                 and repeat_key not in self._deferred_base
                 and coord_frac is not None
                 and self._liftoff_coord.get(repeat_key) is not None
-                and self._liftoff_resolves(
-                    self._liftoff_coord[repeat_key]
-                )
+                and self._liftoff_resolves(self._liftoff_coord[repeat_key])
             ):
                 self.controller_state.click_queue.append(
                     self._liftoff_coord[repeat_key]
@@ -316,7 +314,7 @@ class _PadMixin:
         if self._diacritic_pad == repeat_key:
             if click_active:
                 rect = state.get_diacritic_rect()
-                if rect is not None:
+                if rect is not None and coord_frac is not None:
                     px, py = coord_frac.to_absolute()
                     state.set_diacritic_index(
                         diacritics.variant_index_at_point(

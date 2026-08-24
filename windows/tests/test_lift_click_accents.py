@@ -1,4 +1,4 @@
-﻿"""Headless tests for lift-mode accent opening.
+"""Headless tests for lift-mode accent opening.
 
 With Lift-Off Typing ON, pressing the pad click on a variant-capable key
 opens its accent row INSTANTLY — no hold, no rest gesture. The click's
@@ -11,11 +11,9 @@ the base letter, and only holding past ACCENT_HOLD_OPEN opens the row.
 from collections import deque
 
 import pytest
-
 from triton import state
 from triton.pad import _PadMixin
 from triton.screen import CoordFraction
-
 
 LPADTOUCH, LT, LPAD = 0x00000200, 0x00000100, 0x00000400
 RPADTOUCH, RT, RPAD = 0x00000800, 0x00001000, 0x00002000
@@ -90,8 +88,17 @@ class _D(_PadMixin):
         self.controller_state = _CS()
         self._prev = 0
 
-    def frame(self, buttons, cf, raw_x, now, real_touch=True,
-              touch_mask=LPADTOUCH, sel_mask=LT, click_mask=LPAD):
+    def frame(
+        self,
+        buttons,
+        cf,
+        raw_x,
+        now,
+        real_touch=True,
+        touch_mask=LPADTOUCH,
+        sel_mask=LT,
+        click_mask=LPAD,
+    ):
         self.sc_input_previous = _P(self._prev)
         r = self.handle_pad_input(
             cf,
@@ -225,12 +232,18 @@ def test_lift_mode_accent_click_never_double_inserts_on_lift():
     t += 0.02
     d.frame(LPADTOUCH, cf, 0, t)  # click releases, commits v0
     committed = [
-        item for item in d.controller_state.click_queue if isinstance(item, tuple)
+        item
+        for item in d.controller_state.click_queue
+        if isinstance(item, tuple)
     ]
     assert len(committed) == 1
     t += 0.08
     d.frame(0, cf, 0, t, real_touch=False)  # finger lifts
-    assert [item for item in d.controller_state.click_queue if not isinstance(item, tuple)] == []
+    assert [
+        item
+        for item in d.controller_state.click_queue
+        if not isinstance(item, tuple)
+    ] == []
 
 
 def test_lift_mode_press_types_immediately_when_diacritics_off():
@@ -264,12 +277,26 @@ def test_row_already_open_second_pad_press_defers():
     d.frame(LPADTOUCH | LPAD, left, 0, t)
     assert state.is_diacritic_open()
     t += 0.02
-    d.frame(RPADTOUCH | RPAD, right, 0x7FFF, t,
-            touch_mask=RPADTOUCH, sel_mask=RT, click_mask=RPAD)
+    d.frame(
+        RPADTOUCH | RPAD,
+        right,
+        0x7FFF,
+        t,
+        touch_mask=RPADTOUCH,
+        sel_mask=RT,
+        click_mask=RPAD,
+    )
     assert d._deferred_base.get(RT) is not None
     t += 0.02
-    d.frame(RPADTOUCH, right, 0x7FFF, t,
-            touch_mask=RPADTOUCH, sel_mask=RT, click_mask=RPAD)
+    d.frame(
+        RPADTOUCH,
+        right,
+        0x7FFF,
+        t,
+        touch_mask=RPADTOUCH,
+        sel_mask=RT,
+        click_mask=RPAD,
+    )
     assert list(
         item
         for item in d.controller_state.click_queue
