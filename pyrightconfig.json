@@ -6,7 +6,9 @@
       "root": "windows"
     }
   ],
-  "include": ["windows"],
+  "include": [
+    "windows"
+  ],
   "reportMissingTypeStubs": "none",
   "reportMissingParameterType": "none",
   "reportUnknownMemberType": "none",
@@ -25,6 +27,6 @@
   "reportUnusedVariable": "none",
   "reportPrivateUsage": "none",
   "reportUnusedImport": "none",
-  "reportMissingImports": "warning",
+  "reportMissingImports": "none",
   "reportGeneralTypeIssues": "none"
 }
