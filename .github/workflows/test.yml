@@ -1,0 +1,51 @@
+name: test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+        with:
+          # Full history so pre-commit can diff against origin/main.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install mise
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://mise.run.ps1 -UseBasicParsing | Invoke-Expression
+          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.local\bin"
+
+      - name: Install dependencies
+        run: |
+          pip install --prefer-binary -r requirements.txt
+          pip install -r windows/requirements-dev.txt
+
+      - name: Install tools (mise.toml pre-commit)
+        run: mise install
+
+      - name: Run tests
+        working-directory: windows
+        env:
+          PYTEST_ADDOPTS: "--junitxml=test-results/junit.xml"
+        run: python -m pytest tests -q
+
+      - name: Run pre-commit (origin/main..HEAD)
+        run: mise exec -- pre-commit run -av --from-ref origin/main --to-ref HEAD
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+        with:
+          name: junit-results
+          path: windows/test-results/junit.xml
+          if-no-files-found: warn
