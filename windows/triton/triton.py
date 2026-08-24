@@ -16,6 +16,7 @@ from triton import (
     config,
     controller,
     diacritics,
+    layouts,
     screen,
     state,
     utils,
@@ -129,7 +130,9 @@ def _begin_open_anim(scr, virtual_kb, controller_state, rest):
 
 def load_kb_config():
     kb_config = vkb.VirtualKeyboardConfig()
-    kb_layout_file = config.YamlFile("keyboard-layout.yaml")
+    kb_layout_file = config.YamlFile(
+        layouts.layout_filename(state.get_kb_layout())
+    )
     kb_layout_file.read()
     kb_layout_file.add_to_config("keys", kb_config)
     return kb_config

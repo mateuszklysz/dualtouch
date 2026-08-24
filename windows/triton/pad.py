@@ -37,6 +37,13 @@ class _PadMixin:
     sc_input_previous: _PadFrame
     _click_repeat_at: dict
     _click_settle_at: dict
+    _liftoff_touch: dict
+    _liftoff_coord: dict
+    _liftoff_clicked: dict
+    _liftoff_t0: dict
+    _hover_start: dict
+    _hover_rc: dict
+    _diacritic_hover: dict
     _pad_click_engage: float
     _pad_click_release: float
     _pad_press_hold: float
@@ -79,6 +86,48 @@ class _PadMixin:
     # fresh dict by ControllerManager/__init__; this class default is only a
     # safety net for the standalone test harnesses.
     _deferred_base = {}
+    # Lift-off typing (release-to-insert) per-pad trackers, keyed by the
+    # select-button mask like every other per-pad dict: whether the real
+    # finger was on the pad last frame, the coordinate to insert on lift,
+    # whether ANY click activity happened during the current touch (a touch
+    # that already entered a key must not fire a second insert on lift), and
+    # the monotonic time the touch began. Overridden with fresh dicts by
+    # ControllerManager/__init__; these class defaults are safety nets for
+    # standalone test harnesses.
+    _liftoff_touch = {}
+    _liftoff_coord = {}
+    _liftoff_clicked = {}
+    _liftoff_t0 = {}
+    # Hover-to-open diacritics per-pad trackers, keyed like every other
+    # per-pad dict: the monotonic time the finger STARTED resting on the
+    # currently hovered variant-capable key, and that key's (row, col) —
+    # moving to a different key restarts the countdown. Overridden with
+    # fresh dicts by ControllerManager/__init__; class defaults are safety
+    # nets for standalone test harnesses.
+    _hover_start = {}
+    _hover_rc = {}
+    # Which pads' open diacritic rows came from a HOVER (no click held):
+    # those rows commit when the real finger lifts off the pad instead of
+    # waiting for a click/trigger release that will never come.
+    _diacritic_hover = {}
+    # Minimum real-finger contact (s) before a lift counts as an intentional
+    # tap: brushes past the pad on the way to/from a button are shorter than
+    # any deliberate tap (~50-120 ms) and must stay silent. Mirrors the
+    # `now > 0` convention of the settle window — harness calls with now=0
+    # bypass the duration gate.
+    LIFTOFF_MIN_TOUCH = 0.04
+    # Seconds a real finger must rest on a variant-capable key — no click,
+    # no other session — before its diacritic row opens by itself. The
+    # renderer draws the countdown as the key "filling in" over this window.
+    # Only active while Lift-Off Typing is enabled (hover is a lift-native
+    # gesture; with clicks the press-hold path stays the entry).
+    DIACRITIC_HOVER_OPEN = 1.2
+    # Seconds a CLICKED variant-capable key must be HELD before its variant
+    # row opens (the "hold to show more letters" gesture). Uniform whether
+    # Lift-Off Typing is on or off. Only variant-capable presses arm this
+    # clock; other keys keep the shorter BACKSPACE_HOLD_DELAY so backspace
+    # rub-out cadence is unchanged.
+    DIACRITIC_HOLD_OPEN = 1.0
     # Minimum gap (s) between two "enter the key" edges on the same pad —
     # debounce/settle. A physical pad click can wobble: the force dips below
     # RELEASE and re-crosses ENGAGE within a few ms of the mechanical click's
@@ -111,6 +160,48 @@ class _PadMixin:
         if (not (buttons & click_button_mask)) and (prev & click_button_mask):
             state.pad_click_haptic()
         repeat_key = int(select_button_mask)
+        # Lift-off typing (release-to-insert): track the REAL finger per pad
+        # before any session routing below, so the touch's falling edge is
+        # always seen — sessions (select/diacritic/deferred) return early and
+        # would otherwise hide it. Uses `real_touch` (actual pad contact), not
+        # the synthesized touch bit, because the click button fakes touch
+        # while held. On the falling edge, when enabled and nothing else
+        # consumed this touch, queue an insert of where the finger last sat.
+        lt_touch_now = bool(real_touch)
+        lt_touch_was = self._liftoff_touch.get(repeat_key, False)
+        if lt_touch_now:
+            if not lt_touch_was:
+                self._liftoff_clicked[repeat_key] = False
+                self._liftoff_t0[repeat_key] = now
+            self._liftoff_coord[repeat_key] = coord_frac
+        elif lt_touch_was:
+            # The real finger left the pad: any hover-to-open countdown dies
+            # with it (the fill is hidden too).
+            self._cancel_hover(repeat_key)
+            clicked = self._liftoff_clicked.get(repeat_key, False)
+            long_enough = now <= 0 or (
+                now - self._liftoff_t0.get(repeat_key, 0.0)
+                >= self.LIFTOFF_MIN_TOUCH
+            )
+            if (
+                state.is_sc_liftoff_enabled()
+                and not clicked
+                and long_enough
+                and self._select_pad != repeat_key
+                and self._diacritic_pad != repeat_key
+                and repeat_key not in self._deferred_base
+                and coord_frac is not None
+                and self._liftoff_coord.get(repeat_key) is not None
+                and self._liftoff_resolves(
+                    self._liftoff_coord[repeat_key]
+                )
+            ):
+                self.controller_state.click_queue.append(
+                    self._liftoff_coord[repeat_key]
+                )
+                state.pad_click_haptic()
+                self._diag("liftoff insert k={}", repeat_key)
+        self._liftoff_touch[repeat_key] = lt_touch_now
         if self._select_pad == repeat_key:
             still_active = (allow_click and trigger_pressed) or bool(
                 buttons & click_button_mask
@@ -151,10 +242,14 @@ class _PadMixin:
             # the same frame the click releases, so with the finger already
             # lifted the gate below would return INACTIVE and the release —
             # and its commit — would never run (the row would stay latched,
-            # swallowing every later press on this pad).
-            if not (
-                (allow_click and trigger_pressed)
-                or bool(buttons & click_button_mask)
+            # swallowing every later press on this pad). Hover-opened rows
+            # have no click to release: they end when the REAL finger lifts.
+            click_held = (allow_click and trigger_pressed) or bool(
+                buttons & click_button_mask
+            )
+            if not click_held and not (
+                self._diacritic_hover.get(repeat_key, False)
+                and bool(real_touch)
             ):
                 self._end_diacritic_pad()
                 return state.InputState.INACTIVE
@@ -163,6 +258,7 @@ class _PadMixin:
             # latch so it can't swallow every later press on this pad.
             if not state.is_diacritic_open():
                 self._diacritic_pad = None
+                self._diacritic_hover.pop(repeat_key, None)
                 self._click_repeat_at.pop(repeat_key, None)
         elif repeat_key in self._deferred_base:
             # A deferred variant-capable press (the base was NOT typed at the
@@ -211,6 +307,10 @@ class _PadMixin:
         trigger_edge = trigger_held and (not touch_was or not trigger_prev)
         pad_edge = pad_clicked and not (prev & click_button_mask)
         click_active = trigger_held or pad_clicked
+        # Any click activity during this touch consumes the insert — the lift
+        # must never fire a second one behind the click path.
+        if click_active:
+            self._liftoff_clicked[repeat_key] = True
         # Hold-to-repeat, keyed per pad. First hit enters the key, rumbles, and
         # arms the repeat clock; held past BACKSPACE_HOLD_DELAY it re-enters the
         # key every BACKSPACE_REPEAT. Repeat hits are tagged so the main thread
@@ -240,8 +340,10 @@ class _PadMixin:
         # variant row (see _try_open_diacritic). While the press stays engaged
         # the finger's position within the row highlights the variant; a
         # release commits it (the base already fired on the press edge).
+        # Hover-opened rows behave the same but with no click held — the
+        # finger alone drives the highlight and its lift commits.
         if self._diacritic_pad == repeat_key:
-            if click_active:
+            if click_active or self._diacritic_hover.get(repeat_key, False):
                 rect = state.get_diacritic_rect()
                 if rect is not None:
                     px, py = coord_frac.to_absolute()
@@ -250,7 +352,9 @@ class _PadMixin:
                             rect, px, py, state.get_diacritic_variant_count()
                         )
                     )
-                return state.InputState.CLICK
+                if click_active:
+                    return state.InputState.CLICK
+                return state.InputState.HOVER
             self._end_diacritic_pad()
             return state.InputState.INACTIVE
         if trigger_edge or pad_edge:
@@ -278,9 +382,13 @@ class _PadMixin:
                 # settle window must not lose the base letter.
                 if self._should_defer_press(coord_frac):
                     self._deferred_base[repeat_key] = coord_frac
-                self._click_repeat_at[repeat_key] = (
-                    now + self.BACKSPACE_HOLD_DELAY
-                )
+                    self._click_repeat_at[repeat_key] = (
+                        now + self.DIACRITIC_HOLD_OPEN
+                    )
+                else:
+                    self._click_repeat_at[repeat_key] = (
+                        now + self.BACKSPACE_HOLD_DELAY
+                    )
             else:
                 # Defer model (Feature B): a press landing on a variant-capable
                 # letter does NOT type anything at the press edge. The hold
@@ -288,7 +396,8 @@ class _PadMixin:
                 # then types either the picked variant or the base letter. A
                 # QUICK tap just types the base on release. Non-variant keys
                 # keep firing at the press edge exactly as before.
-                if self._should_defer_press(coord_frac):
+                deferred = self._should_defer_press(coord_frac)
+                if deferred:
                     self._deferred_base[repeat_key] = coord_frac
                     self._diag(
                         "defer press k={} cf={!r}", repeat_key, coord_frac
@@ -305,8 +414,13 @@ class _PadMixin:
                         coord_frac,
                     )
                 state.pad_click_haptic()
-                self._click_repeat_at[repeat_key] = (
-                    now + self.BACKSPACE_HOLD_DELAY
+                # Variant-capable presses arm the LONG hold clock (the
+                # hold-to-show-accents window, lift mode on or off); other
+                # keys keep the shorter backspace-repeat cadence.
+                self._click_repeat_at[repeat_key] = now + (
+                    self.DIACRITIC_HOLD_OPEN
+                    if deferred
+                    else self.BACKSPACE_HOLD_DELAY
                 )
                 self._click_settle_at[repeat_key] = now + self.PAD_CLICK_SETTLE
         elif click_active and now >= self._click_repeat_at.get(
@@ -324,6 +438,11 @@ class _PadMixin:
             self._click_repeat_at[repeat_key] = now + self.BACKSPACE_REPEAT
         if not click_active:
             self._click_repeat_at.pop(repeat_key, None)
+        # Hover-to-open diacritics: a resting finger (no click, no session)
+        # fills the variant-capable key under it and opens its row at 100%.
+        self._update_hover(
+            coord_frac, repeat_key, now, click_active, bool(real_touch)
+        )
         if click_active:
             return state.InputState.CLICK
         return state.InputState.HOVER
@@ -357,6 +476,16 @@ class _PadMixin:
             log_line("pad", msg)
         except Exception:
             pass
+
+    def _liftoff_resolves(self, coord_frac):
+        """True if the stored lift-off coordinate sits on an actual key cell
+        (expanded hit-target, same resolution as a click). Lifting the finger
+        off empty space must stay silent."""
+        kb = state.get_virtual_kb()
+        if kb is None:
+            return False
+        x, y = coord_frac.to_absolute()
+        return kb.find_key_expanded(x, y) is not None
 
     def _should_defer_press(self, coord_frac):
         """Defer model (Feature B): True if the press under the pointer should
@@ -392,6 +521,74 @@ class _PadMixin:
             return False
         self._diacritic_pad = repeat_key
         return True
+
+    def _cancel_hover(self, repeat_key):
+        """Drop this pad's hover-to-open countdown; hide the fill only if
+        THIS pad was the one publishing it (the other pad may be hovering)."""
+        dropped = (
+            self._hover_start.pop(repeat_key, None) is not None
+            or self._hover_rc.pop(repeat_key, None) is not None
+        )
+        if dropped:
+            state.set_hover_fill(None)
+
+    def _update_hover(self, coord_frac, repeat_key, now, click_active, touched):
+        """Hover-to-open (diacritics): a real finger RESTING on a variant-
+        capable key — no click activity, no other session on this pad —
+        fills that key over DIACRITIC_HOVER_OPEN seconds (the renderer draws
+        the growing bar from state.get_hover_fill) and then opens its variant
+        row. The row is marked as hover-opened so the finger's lift commits
+        the highlighted variant. Any click activity, moving to a different
+        key, or lifting cancels the countdown; the press-hold path stays
+        available as the secondary entry.
+
+        Gated on Lift-Off Typing: resting a finger is a lift-native gesture —
+        with lift-off off the countdown never runs (and any stale one is
+        dropped), leaving press-hold as the only row entry."""
+        if not state.is_sc_liftoff_enabled():
+            self._cancel_hover(repeat_key)
+            return
+        if (
+            click_active
+            or self._select_pad == repeat_key
+            or self._diacritic_pad == repeat_key
+            or repeat_key in self._deferred_base
+            or now <= 0  # mirrors the settle-window `now > 0` convention
+        ):
+            self._cancel_hover(repeat_key)
+            return
+        if not touched or coord_frac is None:
+            self._cancel_hover(repeat_key)
+            return
+        kb = state.get_virtual_kb()
+        if kb is None:
+            return
+        x, y = coord_frac.to_absolute()
+        rc = kb.find_key_expanded_rc(x, y)
+        if (
+            rc is None
+            or vkb.diacritic_variants_for_key(kb.keys[rc[0]][rc[1]]) is None
+        ):
+            # Not resting on a variant-capable key: drop the countdown.
+            self._cancel_hover(repeat_key)
+            return
+        # Restart-proof accumulation: never assume the rc/start pair is in
+        # sync — any missing half (fresh pad, cancelled countdown, teardown)
+        # simply starts a new window.
+        start = self._hover_start.get(repeat_key)
+        if self._hover_rc.get(repeat_key) != rc or start is None:
+            self._hover_rc[repeat_key] = rc
+            start = self._hover_start[repeat_key] = now
+        elapsed = now - start
+        frac = min(1.0, max(0.0, elapsed / self.DIACRITIC_HOVER_OPEN))
+        state.set_hover_fill((rc[0], rc[1], frac))
+        if elapsed >= self.DIACRITIC_HOVER_OPEN:
+            self._cancel_hover(repeat_key)
+            if self._try_open_diacritic(coord_frac, repeat_key):
+                self._diacritic_hover[repeat_key] = True
+                self._diag(
+                    "hover open k={} rc={}/{}", repeat_key, rc[0], rc[1]
+                )
 
     def _end_diacritic_pad(self):
         """End the held-to-extend session for this pad: the press released. In
@@ -434,6 +631,7 @@ class _PadMixin:
                 state.close_diacritic()
         finally:
             self._diacritic_pad = None
+            self._diacritic_hover.pop(repeat_key, None)
             self._click_repeat_at.pop(repeat_key, None)
 
     def _fire_arrow(self, dirn):

@@ -224,6 +224,20 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         # by the row). Cleared on release / teardown so a held pad press never
         # leaks a base insert across presses.
         self._deferred_base = {}
+        # Per-pad lift-off typing trackers (see pad._PadMixin): last real-touch
+        # edge, the coordinate to insert on lift, whether click activity
+        # consumed the current touch, and the touch start time. Keyed like
+        # _click_repeat_at by the select-button mask.
+        self._liftoff_touch = {}
+        self._liftoff_coord = {}
+        self._liftoff_clicked = {}
+        self._liftoff_t0 = {}
+        # Per-pad hover-to-open diacritics trackers (see pad._PadMixin):
+        # hover countdown start time, hovered key (row, col), and which pads'
+        # open variant rows came from a hover.
+        self._hover_start = {}
+        self._hover_rc = {}
+        self._diacritic_hover = {}
         # LT's role is decided on its rising edge from whether the left pad was
         # being touched: "shift" (pressed untouched) or "click" (pressed while
         # touching). Latched until LT is released so a later touch can't flip it.
@@ -1042,6 +1056,17 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
         # button can never leak a base insert across a teardown.
         self._deferred_base.clear()
         self._a_deferred_cell = None
+        # Reset the lift-off trackers too: a touch in flight at teardown must
+        # not insert into whatever app gains focus next.
+        self._liftoff_touch.clear()
+        self._liftoff_coord.clear()
+        self._liftoff_clicked.clear()
+        self._liftoff_t0.clear()
+        # And the hover-to-open trackers; hide any hover fill with them.
+        self._hover_start.clear()
+        self._hover_rc.clear()
+        self._diacritic_hover.clear()
+        state.set_hover_fill(None)
 
 
 def update(sc, sc_input, manager):

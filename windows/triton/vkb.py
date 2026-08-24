@@ -436,6 +436,7 @@ class KeyButton:
         shift_valign=None,
         font_size=None,
         shift_keycode=None,
+        char_mode=False,
     ):
         self.str = str
         self.shifted = (
@@ -473,6 +474,13 @@ class KeyButton:
         # Optional alternate keycode used when Shift is held at dispatch time
         # (e.g. ◀ sends KEY_LEFT unshifted, KEY_UP while Shift is held).
         self.shift_keycode = shift_keycode
+        # Character-injection mode (layout YAML `char: true`): dispatch types
+        # the printed label as a CHARACTER — VkKeyScanW chord on the active
+        # layout, KEYEVENTF_UNICODE fallback — instead of tapping the raw
+        # scancode. Used by AZERTY/QWERTZ symbol keys whose labels don't exist
+        # under other OS keymaps (é $ £ ü ß …), so the board types what it
+        # prints on EVERY Windows input language, not just its native one.
+        self.char_mode = char_mode
         # True for the on-screen "Select" key (behavior: select) — the hold-
         # and-drag text-selection key that replaced the right Shift.
         self.is_select = False
@@ -543,6 +551,28 @@ def tap_keycode(keycode):
     kb.reset_shift_state()
     kb.pressEvent([keycode])
     kb.releaseEvent([keycode])
+
+
+def _type_char_key(key):
+    """Type a char-mode key's printed label as a character (see KeyButton
+    .char_mode): the label the user SEES is what gets injected, on any OS
+    keymap. Shift/caps pick the shifted label exactly like the renderer
+    draws it; failures land in dualtouch.log (a windowed exe has no stdout,
+    so this is the only way to see an injection miss)."""
+    kb.reset_shift_state()
+    ch = key.display_label(state.is_shift_held(), state.is_caps_on())
+    if not ch:
+        return
+    if kb.tap_char(ch) is False:
+        try:
+            from applog import log_line
+
+            log_line(
+                "triton",
+                f"char key {ch!r} FAILED (all injection paths)",
+            )
+        except Exception:
+            pass
 
 
 def _modifier_highlights():
@@ -804,6 +834,7 @@ class VirtualKeyboardConfig(config.ObjectConfig):
                     if shift_keycode_str
                     else None
                 )
+                char_mode = bool(yaml_key.get("char", False))
                 behavior = yaml_key.get("behavior", "generic")
                 width_weight = yaml_key.get("width_weight", 1.0)
 
@@ -826,6 +857,7 @@ class VirtualKeyboardConfig(config.ObjectConfig):
                     shift_valign=shift_valign,
                     font_size=font_size,
                     shift_keycode=shift_keycode,
+                    char_mode=char_mode,
                 )
                 if behavior == "select":
                     kb_btn.is_select = True
@@ -920,6 +952,10 @@ def dispatch_key(virtual_kb, key):
     global _dispatch_is_repeat, _dispatch_silent
     if not _dispatch_is_repeat and not _dispatch_silent:
         state.key_sound_tick()
+    # Char-mode keys bypass scancode dispatch entirely — see KeyButton.
+    if key.char_mode:
+        _type_char_key(key)
+        return
     # Keys with a `shift_keycode` (e.g. ◀▶ → ▲▼) want to send the alternate
     # keycode WITHOUT the OS seeing a Shift modifier; otherwise Shift+Arrow
     # selects text instead of just moving the caret. Briefly drop and

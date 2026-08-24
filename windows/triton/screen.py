@@ -701,6 +701,7 @@ class Screen:
         dual_anim=None,
         outline_px=None,
         outline_opacity=None,
+        progress=None,
     ):
         if (
             bg_color_override is not None
@@ -749,6 +750,25 @@ class Screen:
             S.SDL_SetRenderDrawColor(self.renderer, hi.r, hi.g, hi.b, 255)
             S.SDL_RenderLine(
                 self.renderer, key.x, key.y, key.x + key.w - 1, key.y
+            )
+
+        # Hover-to-open diacritics: while a finger rests on this key toward
+        # opening its variant row, a bar in the pressed-key color grows from
+        # the bottom — the "key fills in" affordance. Drawn right after the
+        # base fill so the label/glyph stay on top of it.
+        if progress is not None and progress > 0.0:
+            pc = self.key_color[state.InputState.CLICK]
+            if self._transparent:
+                pa = min(255, int(round(230 * self._tscale)))
+            else:
+                pa = 255
+            fh = max(1, int(round(key.h * min(1.0, progress))))
+            S.SDL_SetRenderDrawColor(self.renderer, pc.r, pc.g, pc.b, pa)
+            S.SDL_RenderFillRect(
+                self.renderer,
+                ctypes.byref(
+                    S.SDL_FRect(key.x, key.y + key.h - fh, key.w, fh)
+                ),
             )
 
         # Inline label + icon: a key with BOTH a text label and a shortcut
@@ -1295,6 +1315,9 @@ class Screen:
         # up. So when a key's rect intersects the strip, the pointers cannot
         # drive its state (button/cursor/mouse-press highlights still apply).
         strip_rect = state.get_diacritic_rect()
+        # Hover-to-open diacritics progress: (row, col, fraction) of the key
+        # a finger is currently filling toward opening its variant row.
+        hover_fill = state.get_hover_fill()
 
         def _key_under_strip(kx, ky, kw, kh):
             if strip_rect is None:
@@ -1499,6 +1522,13 @@ class Screen:
                 dual_anim=dual_anim,
                 outline_px=kb_key.outline_px,
                 outline_opacity=kb_key.outline_opacity,
+                progress=(
+                    hover_fill[2]
+                    if hover_fill is not None
+                    and hover_fill[0] == key.row
+                    and hover_fill[1] == key.col
+                    else None
+                ),
             )
 
         # Drop the per-key clip so the pointer circles (and the next frame's

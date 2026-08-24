@@ -1,0 +1,91 @@
+---
+# Dvorak 75% layout — same board shape as keyboard-layout.yaml with the
+# Dvorak Simplified Keyboard arrangement. Every key pairs its printed
+# label with the scancode that produces it on a stock US Windows layout,
+# so the labels always match what lands in the text field; only the
+# visual arrangement differs from QWERTY.
+keys:
+- - {label: "Esc", keycode: KEY_ESC, width_weight: 1.1, modifier: true, align: left, valign: bottom, outline_opacity: 0.33}
+  - {label: "F1", keycode: KEY_F1, modifier: true, outline_opacity: 0.33}
+  - {label: "F2", keycode: KEY_F2, modifier: true, outline_opacity: 0.33}
+  - {label: "F3", keycode: KEY_F3, modifier: true, outline_opacity: 0.33}
+  - {label: "F4", keycode: KEY_F4, modifier: true, outline_opacity: 0.33}
+  - {label: "F5", keycode: KEY_F5, modifier: true, outline_opacity: 0.33}
+  - {label: "F6", keycode: KEY_F6, modifier: true, outline_opacity: 0.33}
+  - {label: "F7", keycode: KEY_F7, modifier: true, outline_opacity: 0.33}
+  - {label: "F8", keycode: KEY_F8, modifier: true, outline_opacity: 0.33}
+  - {label: "F9", keycode: KEY_F9, modifier: true, outline_opacity: 0.33}
+  - {label: "F10", keycode: KEY_F10, modifier: true, outline_opacity: 0.33}
+  - {label: "F11", keycode: KEY_F11, modifier: true, outline_opacity: 0.33}
+  - {label: "F12", keycode: KEY_F12, modifier: true, outline_opacity: 0.33}
+  - {label: "Home", keycode: KEY_HOME, modifier: true, outline_opacity: 0.33}
+  - {label: "End", keycode: KEY_END, modifier: true, outline_opacity: 0.33}
+  - {label: "Ins", keycode: KEY_INSERT, modifier: true, outline_opacity: 0.33}
+
+- - {label: "`", shifted: "~",  keycode: KEY_GRAVE}
+  - {label: "1", shifted: "!",  keycode: KEY_1}
+  - {label: "2", shifted: "@",  keycode: KEY_2}
+  - {label: "3", shifted: "#",  keycode: KEY_3}
+  - {label: "4", shifted: "$",  keycode: KEY_4}
+  - {label: "5", shifted: "%",  keycode: KEY_5}
+  - {label: "6", shifted: "^",  keycode: KEY_6}
+  - {label: "7", shifted: "&",  keycode: KEY_7}
+  - {label: "8", shifted: "*",  keycode: KEY_8}
+  - {label: "9", shifted: "(",  keycode: KEY_9}
+  - {label: "0", shifted: ")",  keycode: KEY_0}
+  - {label: "[", shifted: "{",  keycode: KEY_LEFTBRACE}
+  - {label: "]", shifted: "}",  keycode: KEY_RIGHTBRACE}
+  - {label: "Backspace", behavior: backspace, keycode: KEY_BACKSPACE, width_weight: 1.4, modifier: true, glyph: glyph_x.png}
+
+- - {label: "Tab", keycode: KEY_TAB, width_weight: 1.4, modifier: true, align: left, valign: bottom, outline_opacity: 0.33}
+  - {label: "'", shifted: "\"", keycode: KEY_APOSTROPHE, legacy_label_pos: true}
+  - {label: ",", shifted: "<",  keycode: KEY_COMMA, dpad_down: 3, legacy_label_pos: true}
+  - {label: ".", shifted: ">",  keycode: KEY_DOT, legacy_label_pos: true}
+  - {label: "p", shifted: "P",  keycode: KEY_P}
+  - {label: "y", shifted: "Y",  keycode: KEY_Y}
+  - {label: "f", shifted: "F",  keycode: KEY_F}
+  - {label: "g", shifted: "G",  keycode: KEY_G}
+  - {label: "c", shifted: "C",  keycode: KEY_C}
+  - {label: "r", shifted: "R",  keycode: KEY_R}
+  - {label: "l", shifted: "L",  keycode: KEY_L}
+  - {label: "/", shifted: "?",  keycode: KEY_SLASH, outline_opacity: 0.33}
+  - {label: "=", shifted: "+",  keycode: KEY_EQUAL, outline_opacity: 0.33}
+  - {label: "\\", shifted: "|", keycode: KEY_BACKSLASH, outline_opacity: 0.33}
+
+- - {label: "Caps", keycode: KEY_CAPSLOCK, width_weight: 1.6, modifier: true, glyph: glyph_l3.png, outline_opacity: 0.33}
+  - {label: "a", shifted: "A", keycode: KEY_A}
+  - {label: "o", shifted: "O", keycode: KEY_O}
+  - {label: "e", shifted: "E", keycode: KEY_E}
+  - {label: "u", shifted: "U", keycode: KEY_U}
+  - {label: "i", shifted: "I", keycode: KEY_I}
+  - {label: "d", shifted: "D", keycode: KEY_D}
+  - {label: "h", shifted: "H", keycode: KEY_H}
+  - {label: "t", shifted: "T", keycode: KEY_T}
+  - {label: "n", shifted: "N", keycode: KEY_N}
+  - {label: "s", shifted: "S", keycode: KEY_S}
+  - {label: "-", shifted: "_", keycode: KEY_MINUS, legacy_label_pos: true}
+  - {label: "Enter", keycode: KEY_ENTER, width_weight: 1.7, modifier: true, align: right, valign: bottom, glyph: sc_r2_md.png, outline_opacity: 0.33}
+
+- - {label: "Shift", behavior: shift, keycode: KEY_LEFTSHIFT, width_weight: 2.0, modifier: true, align: left, valign: bottom, glyph: glyph_l2.png, outline_opacity: 0.33}
+  - {label: ";", shifted: ":", keycode: KEY_SEMICOLON}
+  - {label: "q", shifted: "Q", keycode: KEY_Q}
+  - {label: "j", shifted: "J", keycode: KEY_J}
+  - {label: "k", shifted: "K", keycode: KEY_K}
+  - {label: "x", shifted: "X", keycode: KEY_X}
+  - {label: "b", shifted: "B", keycode: KEY_B}
+  - {label: "m", shifted: "M", keycode: KEY_M}
+  - {label: "w", shifted: "W", keycode: KEY_W}
+  - {label: "v", shifted: "V", keycode: KEY_V}
+  - {label: "z", shifted: "Z", keycode: KEY_Z}
+  - {label: "Select", behavior: select, keycode: KEY_SELECT, width_weight: 2.0, modifier: true, align: right, valign: bottom, outline_opacity: 0.33}
+
+- - {label: "Ctrl", behavior: ctrl, keycode: KEY_LEFTCTRL, width_weight: 1.2, modifier: true, align: left, valign: bottom}
+  - {label: "Alt", behavior: alt, keycode: KEY_LEFTALT, width_weight: 1.1, modifier: true, align: left, valign: bottom}
+  - {label: "Win", keycode: KEY_LEFTWIN, width_weight: 1.1, modifier: true, align: left, valign: bottom}
+  - {label: "Space", keycode: KEY_SPACE, width_weight: 4.5, glyph: glyph_y.png}
+  - {label: "◀", keycode: KEY_LEFT, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "▲", keycode: KEY_UP, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "▼", keycode: KEY_DOWN, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "▶", keycode: KEY_RIGHT, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "Paste", shifted: "Copy", behavior: paste, width_weight: 1.2, modifier: true, dual_top_dy: 4, dual_bottom_dy: 4, outline_opacity: 0.33}
+  - {label: "Move", behavior: move, width_weight: 1.4, modifier: true, valign: top, glyph: glyph_smiley.png}

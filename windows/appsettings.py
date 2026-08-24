@@ -90,6 +90,11 @@ DEFAULT_SETTINGS = {
     #   "L1/R1" = bumpers (the original behavior, default) / "L2/R2" = triggers.
     "sc_pad_click_enter": False,
     "sc_click_button": "L1/R1",
+    # Lift-off typing (tray "Steam Controller -> Lift-Off Typing"): insert the
+    # key under the pointer when the finger LIFTS off the trackpad — no pad
+    # press or click button needed. The click paths keep working alongside it;
+    # a touch that already clicked never double-fires on lift.
+    "sc_liftoff_enter": False,
     # Click-button focus (the lock-on-key that follows the click button):
     # when the click button is L2/R2, the trigger's analog pull (0..32767) at
     # which the pointer freezes on the key center (default = half pull); the
@@ -107,6 +112,11 @@ DEFAULT_SETTINGS = {
     # reach). Applied on the next OSK open (or live while open, like the
     # other SC toggles).
     "osk_split_layout": False,
+    # On-screen-keyboard key layout (tray "Keyboard Layout" radio): which
+    # bundled layout the OSK builds at the next open. "QWERTY" keeps the
+    # original keyboard-layout.yaml; the full name->file map lives in
+    # triton/layouts.py (AZERTY/QWERTZ/Dvorak/Colemak/ABC bundled).
+    "osk_layout": "QWERTY",
     # Per-foreground-app remembered OSK "Move" position: {exe name (lowercase):
     # position index 0-5}. Remembered per app so the keyboard reopens where the
     # user left it in each app; apps without an entry keep the current spot
@@ -335,6 +345,11 @@ def _load_settings():
         elif isinstance(default, (int, float)):
             merged[k] = _coerce_number(val, default)
         elif k == "skin":
+            merged[k] = _valid_skin_name(val) or default
+        elif k == "osk_layout":
+            # Same plain-identifier rule as the skin name: a layout name is
+            # matched against triton/layouts.py's registry and must never
+            # carry a path. (The tray re-validates against the registry.)
             merged[k] = _valid_skin_name(val) or default
         elif k == "window_position_per_app":
             merged[k] = _valid_position_per_app(val)

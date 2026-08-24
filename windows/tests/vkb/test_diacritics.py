@@ -1,4 +1,4 @@
-"""Headless tests for the Feature-B diacritic-variant logic
+﻿"""Headless tests for the Feature-B diacritic-variant logic
 (triton/diacritics.py + the settings roundtrip).
 
 Pure logic: the per-locale variant map and its merge/lookup rules, the
@@ -443,8 +443,9 @@ def test_pad_hold_opens_row_and_release_commits_variant():
     assert list(d.controller_state.click_queue) == []
     assert d._deferred_base == {LT: cf}
 
-    # 2) Held past the hold delay -> the row opens instead of a key repeat.
-    t += vkb.KEY_REPEAT_DELAY
+    # 2) Held past the hold delay (DIACRITIC_HOLD_OPEN = 1.0 s) -> the row
+    #    opens instead of a key repeat.
+    t += 1.0
     d.frame(LPADTOUCH | LT | LPAD, cf, 0, t)
     assert state.is_diacritic_open()
     assert list(d.controller_state.click_queue) == []
@@ -582,8 +583,8 @@ def test_pad_release_with_finger_lifted_still_commits_and_unlatches():
     d.frame(LPADTOUCH | LT | LPAD, cf, 0, t)
     assert list(d.controller_state.click_queue) == []
 
-    # 2) Held past the hold delay -> the row opens.
-    t += vkb.KEY_REPEAT_DELAY
+    # 2) Held past the hold delay (DIACRITIC_HOLD_OPEN = 1.0 s) -> opens.
+    t += 1.0
     d.frame(LPADTOUCH | LT | LPAD, cf, 0, t)
     assert state.is_diacritic_open()
     sess = state.get_diacritic()

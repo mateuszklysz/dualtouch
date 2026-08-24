@@ -1,0 +1,95 @@
+---
+# AZERTY 75% layout (French) — same board shape as keyboard-layout.yaml
+# (F-row, number row, three letter rows, bottom Ctrl/Alt/Win/Space/arrows/
+# Paste/Move row), with the French keycaps placed at their AZERTY positions.
+#
+# Letters ride their own scancodes (label == what the code types under any
+# Latin Windows layout). Keys whose printed symbol is NOT universal carry
+# `char: true`: dispatch injects the printed label as a character (active-
+# layout chord, Unicode fallback) instead of tapping the raw scancode, so
+# the board types what it prints on EVERY Windows input language.
+keys:
+- - {label: "Esc", keycode: KEY_ESC, width_weight: 1.1, modifier: true, align: left, valign: bottom, outline_opacity: 0.33}
+  - {label: "F1", keycode: KEY_F1, modifier: true, outline_opacity: 0.33}
+  - {label: "F2", keycode: KEY_F2, modifier: true, outline_opacity: 0.33}
+  - {label: "F3", keycode: KEY_F3, modifier: true, outline_opacity: 0.33}
+  - {label: "F4", keycode: KEY_F4, modifier: true, outline_opacity: 0.33}
+  - {label: "F5", keycode: KEY_F5, modifier: true, outline_opacity: 0.33}
+  - {label: "F6", keycode: KEY_F6, modifier: true, outline_opacity: 0.33}
+  - {label: "F7", keycode: KEY_F7, modifier: true, outline_opacity: 0.33}
+  - {label: "F8", keycode: KEY_F8, modifier: true, outline_opacity: 0.33}
+  - {label: "F9", keycode: KEY_F9, modifier: true, outline_opacity: 0.33}
+  - {label: "F10", keycode: KEY_F10, modifier: true, outline_opacity: 0.33}
+  - {label: "F11", keycode: KEY_F11, modifier: true, outline_opacity: 0.33}
+  - {label: "F12", keycode: KEY_F12, modifier: true, outline_opacity: 0.33}
+  - {label: "Home", keycode: KEY_HOME, modifier: true, outline_opacity: 0.33}
+  - {label: "End", keycode: KEY_END, modifier: true, outline_opacity: 0.33}
+  - {label: "Ins", keycode: KEY_INSERT, modifier: true, outline_opacity: 0.33}
+
+- - {label: "²", char: true, keycode: KEY_GRAVE}
+  - {label: "&", shifted: "1",  char: true, keycode: KEY_1}
+  - {label: "é", shifted: "2",  char: true, keycode: KEY_2}
+  - {label: "\"", shifted: "3", char: true, keycode: KEY_3, legacy_label_pos: true}
+  - {label: "'", shifted: "4",  char: true, keycode: KEY_4}
+  - {label: "(", shifted: "5",  char: true, keycode: KEY_5}
+  - {label: "-", shifted: "6",  char: true, keycode: KEY_6}
+  - {label: "è", shifted: "7",  char: true, keycode: KEY_7}
+  - {label: "_", shifted: "8",  char: true, keycode: KEY_8}
+  - {label: "ç", shifted: "9",  char: true, keycode: KEY_9}
+  - {label: "à", shifted: "0",  char: true, keycode: KEY_0}
+  - {label: ")", shifted: "°",  char: true, keycode: KEY_MINUS}
+  - {label: "=", shifted: "+",  keycode: KEY_EQUAL}
+  - {label: "Backspace", behavior: backspace, keycode: KEY_BACKSPACE, width_weight: 1.4, modifier: true, glyph: glyph_x.png}
+
+- - {label: "Tab", keycode: KEY_TAB, width_weight: 1.4, modifier: true, align: left, valign: bottom, outline_opacity: 0.33}
+  - {label: "a", shifted: "A", keycode: KEY_A}
+  - {label: "z", shifted: "Z", keycode: KEY_Z}
+  - {label: "e", shifted: "E", keycode: KEY_E}
+  - {label: "r", shifted: "R", keycode: KEY_R}
+  - {label: "t", shifted: "T", keycode: KEY_T}
+  - {label: "y", shifted: "Y", keycode: KEY_Y}
+  - {label: "u", shifted: "U", keycode: KEY_U}
+  - {label: "i", shifted: "I", keycode: KEY_I}
+  - {label: "o", shifted: "O", keycode: KEY_O}
+  - {label: "p", shifted: "P", keycode: KEY_P}
+  - {label: "^", shifted: "¨", char: true, keycode: KEY_LEFTBRACE, legacy_label_pos: true}
+  - {label: "$", shifted: "£", char: true, keycode: KEY_RIGHTBRACE}
+  - {label: "*", shifted: "µ", char: true, keycode: KEY_BACKSLASH}
+
+- - {label: "Caps", keycode: KEY_CAPSLOCK, width_weight: 1.6, modifier: true, glyph: glyph_l3.png, outline_opacity: 0.33}
+  - {label: "q", shifted: "Q", keycode: KEY_Q}
+  - {label: "s", shifted: "S", keycode: KEY_S}
+  - {label: "d", shifted: "D", keycode: KEY_D}
+  - {label: "f", shifted: "F", keycode: KEY_F}
+  - {label: "g", shifted: "G", keycode: KEY_G}
+  - {label: "h", shifted: "H", keycode: KEY_H}
+  - {label: "j", shifted: "J", keycode: KEY_J}
+  - {label: "k", shifted: "K", keycode: KEY_K}
+  - {label: "l", shifted: "L", keycode: KEY_L}
+  - {label: "m", shifted: "M", keycode: KEY_M}
+  - {label: "ù", shifted: "%", char: true, keycode: KEY_APOSTROPHE}
+  - {label: "Enter", keycode: KEY_ENTER, width_weight: 1.7, modifier: true, align: right, valign: bottom, glyph: sc_r2_md.png, outline_opacity: 0.33}
+
+- - {label: "Shift", behavior: shift, keycode: KEY_LEFTSHIFT, width_weight: 2.0, modifier: true, align: left, valign: bottom, glyph: glyph_l2.png, outline_opacity: 0.33}
+  - {label: "w", shifted: "W", keycode: KEY_W}
+  - {label: "x", shifted: "X", keycode: KEY_X}
+  - {label: "c", shifted: "C", keycode: KEY_C}
+  - {label: "v", shifted: "V", keycode: KEY_V}
+  - {label: "b", shifted: "B", keycode: KEY_B}
+  - {label: "n", shifted: "N", keycode: KEY_N}
+  - {label: ",", shifted: "?", char: true, keycode: KEY_COMMA, dpad_down: 3, legacy_label_pos: true}
+  - {label: ";", shifted: ".", char: true, keycode: KEY_DOT, legacy_label_pos: true}
+  - {label: ":", shifted: "/", char: true, keycode: KEY_SLASH, legacy_label_pos: true}
+  - {label: "!", shifted: "§", char: true, keycode: KEY_SLASH}
+  - {label: "Select", behavior: select, keycode: KEY_SELECT, width_weight: 2.0, modifier: true, align: right, valign: bottom, outline_opacity: 0.33}
+
+- - {label: "Ctrl", behavior: ctrl, keycode: KEY_LEFTCTRL, width_weight: 1.2, modifier: true, align: left, valign: bottom}
+  - {label: "Alt", behavior: alt, keycode: KEY_LEFTALT, width_weight: 1.1, modifier: true, align: left, valign: bottom}
+  - {label: "Win", keycode: KEY_LEFTWIN, width_weight: 1.1, modifier: true, align: left, valign: bottom}
+  - {label: "Space", keycode: KEY_SPACE, width_weight: 4.5, glyph: glyph_y.png}
+  - {label: "◀", keycode: KEY_LEFT, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "▲", keycode: KEY_UP, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "▼", keycode: KEY_DOWN, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "▶", keycode: KEY_RIGHT, width_weight: 0.9, modifier: true, font: symbol, legacy_label_pos: true}
+  - {label: "Paste", shifted: "Copy", behavior: paste, width_weight: 1.2, modifier: true, dual_top_dy: 4, dual_bottom_dy: 4, outline_opacity: 0.33}
+  - {label: "Move", behavior: move, width_weight: 1.4, modifier: true, valign: top, glyph: glyph_smiley.png}

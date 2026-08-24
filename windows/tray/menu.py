@@ -2,6 +2,7 @@
 
 import pystray
 from appsettings import _SC_OSK_OPEN_CHORDS
+from triton import layouts as triton_layouts
 from triton import skins as triton_skins
 
 
@@ -127,7 +128,26 @@ def build_menu(app):
             app.toggle_pad_click_enter,
             checked=app.is_pad_click_enter_checked,
         ),
+        pystray.MenuItem(
+            "Lift-Off Typing",
+            app.toggle_liftoff_enter,
+            checked=app.is_liftoff_enter_checked,
+        ),
         pystray.MenuItem("Click Button", click_button_submenu),
+    )
+
+    # Keyboard layout (radio; applied on the next OSK open — the keyboard is
+    # rebuilt from the layout YAML every time it opens).
+    layout_submenu = pystray.Menu(
+        *[
+            pystray.MenuItem(
+                name,
+                app.select_layout(name),
+                checked=app.is_layout_checked(name),
+                radio=True,
+            )
+            for name in triton_layouts.available_layouts()
+        ]
     )
 
     # Diacritic variants (Feature B: hold a letter to pick accented variants):
@@ -205,6 +225,7 @@ def build_menu(app):
         pystray.MenuItem("Startup", startup_submenu),
         pystray.MenuItem("Steam Controller", sc_submenu),
         pystray.MenuItem("Diacritics", diacritics_submenu),
+        pystray.MenuItem("Keyboard Layout", layout_submenu),
         pystray.MenuItem("Keyboard Skin", skin_submenu),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Exit", app.exit_app),
