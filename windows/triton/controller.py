@@ -843,9 +843,7 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
                 adjust_raw_y(sc_input.lpad_y, 1 / 2),
             )
             ptr_right_coords = CoordFraction.from_absolute(
-                adjust_raw_x_span(
-                    sc_input.rpad_x, band_right, screen.width
-                ),
+                adjust_raw_x_span(sc_input.rpad_x, band_right, screen.width),
                 adjust_raw_y(sc_input.rpad_y, 1 / 2),
             )
         else:
@@ -983,8 +981,20 @@ class ControllerManager(_PadMixin, _StickMixin, _TriggerMixin):
             real_touch=rpad_touched,
         )
 
-        ptr_left = vptr.VirtualPointer(input_state_left, ptr_left_coords)
-        ptr_right = vptr.VirtualPointer(input_state_right, ptr_right_coords)
+        # Fresh COPIES for the pointers: smoothen() mutates its coord in
+        # place, and ptr_*_coords may be ALIASED by items already queued on
+        # the controller thread (pad-click inserts / deferred bases) or by
+        # the stored lock targets. Without the copy the post-click glide
+        # would drag those queued coordinates off the key before the main
+        # thread drains them — the insert lands keys away from the lock.
+        ptr_left = vptr.VirtualPointer(
+            input_state_left,
+            CoordFraction.from_absolute(*ptr_left_coords.to_absolute()),
+        )
+        ptr_right = vptr.VirtualPointer(
+            input_state_right,
+            CoordFraction.from_absolute(*ptr_right_coords.to_absolute()),
+        )
 
         ptr_left.smoothen(
             self.prev_ptr_left,
