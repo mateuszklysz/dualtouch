@@ -31,7 +31,9 @@ import sys
 from ctypes import wintypes
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-ENTRY = os.path.join("tray", "__main__.py")
+# Compile the package itself (never tray/__main__.py) in -m package mode,
+# so the frozen program runs exactly like the documented `python -m tray`.
+ENTRY = "tray"
 OUTPUT_NAME = "DualTouch-windows"
 HELPER_EXE_NAME = "DualTouch-cursor-helper.exe"
 DIST_DIR = os.path.join(PROJECT_DIR, "dist")
@@ -379,6 +381,11 @@ def _run_nuitka():
         "--include-module=pynput.mouse._win32",
         "--include-module=PIL._tkinter_finder",
         "--include-package=sdl3w",
+        # Our local `triton` package collides with the ML 'triton' PyPI
+        # package in anti-bloat's eyes ("undesirable import"); allow it so
+        # every import of our own code compiles without warnings.
+        "--noinclude-custom-mode=triton:allow",
+        "--python-flag=-m",
         ENTRY,
     ]
     print("running:", " ".join(cmd))
