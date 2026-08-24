@@ -30,7 +30,7 @@ jobs:
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --prefer-binary -r windows/requirements.txt -r windows/requirements-dev.txt
+          python -m pip install --prefer-binary -r requirements.txt -r windows/requirements-dev.txt
       - name: Pre-commit (origin/main..HEAD)
         run: mise exec -- pre-commit run -av --from-ref origin/main --to-ref HEAD
 
