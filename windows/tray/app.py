@@ -5,7 +5,6 @@ import threading
 from contextlib import suppress
 from typing import Any
 
-import pystray
 import steam_shortcut as ssc
 from applog import is_logging_enabled as applog_is_logging_enabled
 from applog import log_line as applog_log_line
@@ -27,7 +26,7 @@ from watchers import _ChordState
 
 from .battery import _BatteryMixin
 from .helpers import _apply_autostart
-from .icon import _load_icon_image
+from .icon import SessionAwareIcon, _load_icon_image
 from .launcher import _LauncherMixin
 from .menu import build_menu
 from .steam import _SteamLayerMixin
@@ -157,6 +156,11 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         self._publish_diacritics()
 
         self._stop_event = threading.Event()
+        # Windows may deliver WM_ENDSESSION at the same time as a tray Exit
+        # click. Make the cleanup path one-shot so controller/cursor teardown
+        # and icon.stop() cannot race each other.
+        self._shutdown_lock = threading.Lock()
+        self._shutdown_started = False
         # Steam-required cache for _should_abort_sc (2s TTL — the per-frame
         # abort check must not call psutil on every HID report).
         self._steam_ok_at = 0.0
@@ -557,7 +561,12 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
             self.settings.get("diacritic_locale", "auto") == locale
         )
 
-    def exit_app(self, icon, item):
+    def _shutdown(self, icon):
+        """Stop the tray and background work for user or Windows shutdown."""
+        with self._shutdown_lock:
+            if self._shutdown_started:
+                return
+            self._shutdown_started = True
         self._stop_event.set()
         # Wake any event-idle background threads so they observe the stop.
         self._steam_watch_wake.set()
@@ -588,6 +597,13 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         ).start()
         icon.stop()
 
+    def on_windows_session_end(self, icon):
+        """Callback from the tray window after Windows accepts shutdown."""
+        self._shutdown(icon)
+
+    def exit_app(self, icon, item):
+        self._shutdown(icon)
+
     def _notify(self, title, message):
         icon = self._icon_ref
         if icon is None:
@@ -616,7 +632,13 @@ def main():
 
     menu = build_menu(app)
 
-    icon = pystray.Icon("SteamControllerKeyboard", image, "DualTouch", menu)
+    icon = SessionAwareIcon(
+        "SteamControllerKeyboard",
+        image,
+        "DualTouch",
+        menu,
+        on_session_end=app.on_windows_session_end,
+    )
     app._icon_ref = icon
 
     def setup(icon):
