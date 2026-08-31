@@ -188,6 +188,11 @@ def build_menu(app):
             checked=app.is_start_with_windows_checked,
         ),
         pystray.MenuItem(
+            "Start Steam on startup",
+            app.toggle_start_steam_on_startup,
+            checked=app.is_start_steam_on_startup_checked,
+        ),
+        pystray.MenuItem(
             "Enable Logging",
             app.toggle_logging,
             checked=app.is_logging_checked,

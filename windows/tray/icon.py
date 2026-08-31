@@ -3,8 +3,42 @@
 import ctypes
 import os
 
+import pystray
 from applog import _bundle_dir
 from PIL import Image
+
+# Windows sends these messages to every top-level window during logoff,
+# restart, and shutdown. pystray's dispatcher returns 0 for messages it does
+# not know, which Windows treats as a veto for WM_QUERYENDSESSION.
+WM_QUERYENDSESSION = 0x0011
+WM_ENDSESSION = 0x0016
+
+
+class SessionAwareIcon(pystray.Icon):
+    """Tray icon that cooperates with Windows session shutdown.
+
+    The project only uses pystray's Windows backend, but keeping the handler
+    registration conditional makes this class harmless if another backend is
+    selected for headless tests or source inspection.
+    """
+
+    def __init__(self, *args, on_session_end=None, **kwargs):
+        self._on_session_end_callback = on_session_end
+        super().__init__(*args, **kwargs)
+        handlers = getattr(self, "_message_handlers", None)
+        if isinstance(handlers, dict):
+            handlers[WM_QUERYENDSESSION] = self._on_query_end_session
+            handlers[WM_ENDSESSION] = self._on_end_session
+
+    def _on_query_end_session(self, wparam, lparam):
+        """Approve Windows session termination immediately."""
+        return 1
+
+    def _on_end_session(self, wparam, lparam):
+        """Start application cleanup after Windows commits to termination."""
+        if wparam and self._on_session_end_callback is not None:
+            self._on_session_end_callback(self)
+        return 0
 
 
 def _load_icon_image():

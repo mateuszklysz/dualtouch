@@ -26,6 +26,10 @@ DEFAULT_SETTINGS = {
     # Write dualtouch.log (tray "Startup -> Enable Logging"). Off by default:
     # the log is for diagnosing problems, not for everyday runs.
     "logging_enabled": False,
+    # Startup cleanup uses steam://forceinputappid/0 to clear a stale Steam
+    # Input override. If Steam is not already running, handling that URL can
+    # launch Steam, so make that launch an explicit opt-in from the tray.
+    "start_steam_on_startup": False,
     # Steam keyboard-layer switching: when enabled (default), the OSK asks
     # Steam Input to switch to the "DualTouch Keyboard Layer" shortcut's
     # controller config (LB/RB muted, everything else default) while the

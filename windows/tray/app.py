@@ -5,7 +5,6 @@ import threading
 from contextlib import suppress
 from typing import Any
 
-import pystray
 import steam_shortcut as ssc
 from applog import is_logging_enabled as applog_is_logging_enabled
 from applog import log_line as applog_log_line
@@ -27,7 +26,7 @@ from watchers import _ChordState
 
 from .battery import _BatteryMixin
 from .helpers import _apply_autostart
-from .icon import _load_icon_image
+from .icon import SessionAwareIcon, _load_icon_image
 from .launcher import _LauncherMixin
 from .menu import build_menu
 from .steam import _SteamLayerMixin
@@ -157,6 +156,11 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         self._publish_diacritics()
 
         self._stop_event = threading.Event()
+        # Windows may deliver WM_ENDSESSION at the same time as a tray Exit
+        # click. Make the cleanup path one-shot so controller/cursor teardown
+        # and icon.stop() cannot race each other.
+        self._shutdown_lock = threading.Lock()
+        self._shutdown_started = False
         # Steam-required cache for _should_abort_sc (2s TTL — the per-frame
         # abort check must not call psutil on every HID report).
         self._steam_ok_at = 0.0
@@ -254,6 +258,9 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
 
     def is_start_with_windows_checked(self, item):
         return self.settings["start_with_windows"]
+
+    def is_start_steam_on_startup_checked(self, item):
+        return self.settings.get("start_steam_on_startup", False)
 
     # Skin submenu: one radio item per bundled skin. pystray needs a distinct
     # checked-predicate and action per name, so we build small closures.
@@ -365,6 +372,12 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         self.settings["start_with_windows"] = not item.checked
         _save_settings(self.settings)
         _apply_autostart(self.settings["start_with_windows"])
+        self._refresh_menu()
+
+    def toggle_start_steam_on_startup(self, icon, item):
+        self.settings["start_steam_on_startup"] = not item.checked
+        _save_settings(self.settings)
+        self._refresh_menu()
 
     def toggle_logging(self, icon, item):
         self.settings["logging_enabled"] = not item.checked
@@ -377,24 +390,30 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
 
     def view_log(self, icon, item):
         """Tray "View Log": open dualtouch.log with the default handler.
-        If logging is off or the file doesn't exist yet, enable logging for
-        THIS call only (write a marker so the file exists) — never persist
-        logging_enabled, so the tray toggle stays exactly as the user set it.
-        Viewing a log must not silently flip the user's logging preference."""
-        if not applog_is_logging_enabled():
-            set_logging_enabled(True)  # in-memory only; not saved
-        action, path = resolve_log_action()
-        if action != "open":
-            # Logging is on (this call) but the file was never written (e.g.
-            # no activity yet) — write a marker so there is something to open.
-            applog_log_line("tray", "Log opened via tray View Log")
+        If logging is off or the file doesn't exist yet, enable logging only
+        long enough to write a marker so there is something to open. Never
+        persist or leave logging_enabled enabled as a side effect of viewing
+        the log; the tray preference remains exactly as the user set it."""
+        was_enabled = applog_is_logging_enabled()
+        try:
+            if not was_enabled:
+                set_logging_enabled(True)  # in-memory only; not saved
             action, path = resolve_log_action()
-        if action == "open":
-            try:
-                os.startfile(path)
-                return
-            except Exception as e:
-                print(f"view log open failed: {e!r}")
+            if action != "open":
+                # Logging is on (this call) but the file was never written
+                # (e.g. no activity yet) — write a marker so there is
+                # something to open.
+                applog_log_line("tray", "Log opened via tray View Log")
+                action, path = resolve_log_action()
+            if action == "open":
+                try:
+                    os.startfile(path)
+                    return
+                except Exception as e:
+                    print(f"view log open failed: {e!r}")
+        finally:
+            if not was_enabled:
+                set_logging_enabled(False)
 
     # --- Live Steam Controller settings (tray "Steam Controller" submenu) ---
     # Every toggle/radio below saves to settings.json AND republishes to the
@@ -542,7 +561,12 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
             self.settings.get("diacritic_locale", "auto") == locale
         )
 
-    def exit_app(self, icon, item):
+    def _shutdown(self, icon):
+        """Stop the tray and background work for user or Windows shutdown."""
+        with self._shutdown_lock:
+            if self._shutdown_started:
+                return
+            self._shutdown_started = True
         self._stop_event.set()
         # Wake any event-idle background threads so they observe the stop.
         self._steam_watch_wake.set()
@@ -573,6 +597,13 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         ).start()
         icon.stop()
 
+    def on_windows_session_end(self, icon):
+        """Callback from the tray window after Windows accepts shutdown."""
+        self._shutdown(icon)
+
+    def exit_app(self, icon, item):
+        self._shutdown(icon)
+
     def _notify(self, title, message):
         icon = self._icon_ref
         if icon is None:
@@ -601,7 +632,13 @@ def main():
 
     menu = build_menu(app)
 
-    icon = pystray.Icon("SteamControllerKeyboard", image, "DualTouch", menu)
+    icon = SessionAwareIcon(
+        "SteamControllerKeyboard",
+        image,
+        "DualTouch",
+        menu,
+        on_session_end=app.on_windows_session_end,
+    )
     app._icon_ref = icon
 
     def setup(icon):
