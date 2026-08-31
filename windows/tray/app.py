@@ -255,6 +255,9 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
     def is_start_with_windows_checked(self, item):
         return self.settings["start_with_windows"]
 
+    def is_start_steam_on_startup_checked(self, item):
+        return self.settings.get("start_steam_on_startup", False)
+
     # Skin submenu: one radio item per bundled skin. pystray needs a distinct
     # checked-predicate and action per name, so we build small closures.
     def is_skin_checked(self, name):
@@ -365,6 +368,12 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
         self.settings["start_with_windows"] = not item.checked
         _save_settings(self.settings)
         _apply_autostart(self.settings["start_with_windows"])
+        self._refresh_menu()
+
+    def toggle_start_steam_on_startup(self, icon, item):
+        self.settings["start_steam_on_startup"] = not item.checked
+        _save_settings(self.settings)
+        self._refresh_menu()
 
     def toggle_logging(self, icon, item):
         self.settings["logging_enabled"] = not item.checked
@@ -377,24 +386,30 @@ class App(_BatteryMixin, _LauncherMixin, _SteamLayerMixin):
 
     def view_log(self, icon, item):
         """Tray "View Log": open dualtouch.log with the default handler.
-        If logging is off or the file doesn't exist yet, enable logging for
-        THIS call only (write a marker so the file exists) — never persist
-        logging_enabled, so the tray toggle stays exactly as the user set it.
-        Viewing a log must not silently flip the user's logging preference."""
-        if not applog_is_logging_enabled():
-            set_logging_enabled(True)  # in-memory only; not saved
-        action, path = resolve_log_action()
-        if action != "open":
-            # Logging is on (this call) but the file was never written (e.g.
-            # no activity yet) — write a marker so there is something to open.
-            applog_log_line("tray", "Log opened via tray View Log")
+        If logging is off or the file doesn't exist yet, enable logging only
+        long enough to write a marker so there is something to open. Never
+        persist or leave logging_enabled enabled as a side effect of viewing
+        the log; the tray preference remains exactly as the user set it."""
+        was_enabled = applog_is_logging_enabled()
+        try:
+            if not was_enabled:
+                set_logging_enabled(True)  # in-memory only; not saved
             action, path = resolve_log_action()
-        if action == "open":
-            try:
-                os.startfile(path)
-                return
-            except Exception as e:
-                print(f"view log open failed: {e!r}")
+            if action != "open":
+                # Logging is on (this call) but the file was never written
+                # (e.g. no activity yet) — write a marker so there is
+                # something to open.
+                applog_log_line("tray", "Log opened via tray View Log")
+                action, path = resolve_log_action()
+            if action == "open":
+                try:
+                    os.startfile(path)
+                    return
+                except Exception as e:
+                    print(f"view log open failed: {e!r}")
+        finally:
+            if not was_enabled:
+                set_logging_enabled(False)
 
     # --- Live Steam Controller settings (tray "Steam Controller" submenu) ---
     # Every toggle/radio below saves to settings.json AND republishes to the

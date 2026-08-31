@@ -49,7 +49,7 @@ It is a Windows-only fork of [SteamlessKeyboard](https://github.com/PietPetGit/S
 ## Requirements
 
 - Windows 10 or 11 (64-bit)
-- [Steam](https://store.steampowered.com), running, with Steam Input available — DualTouch waits for it on launch
+- [Steam](https://store.steampowered.com), with Steam Input available — DualTouch waits for it unless “Start Steam on startup” is enabled in the tray
 - Python 3.10+ if running from source (not needed for the prebuilt exe)
 
 ## Quick Start
@@ -64,7 +64,7 @@ cursor-helper name (so the two processes are distinguishable in Task
 Manager); keep it too.
 
 - Settings: `%APPDATA%\DualTouch\settings.json` (auto-created with defaults; a legacy file next to the exe is migrated automatically)
-- Logs: `%APPDATA%\DualTouch\dualtouch.log`
+- Logs: `%APPDATA%\DualTouch\dualtouch.log` (created only when logging is enabled)
 
 **From source**
 
@@ -98,6 +98,8 @@ menus), or by hand-editing `settings.json` for finer control.
 | `steam_kbd_layer` | `true` | Dispatch the `forceinputappid` keyboard layer while open |
 | `block_sc_hid` | `false` | Open the Steam Controller HID exclusively (Steam can't read it) |
 | `start_with_windows` | `false` | Launch at logon (elevated scheduled task, no UAC prompt) |
+| `start_steam_on_startup` | `false` | Start Steam when DualTouch starts if it is not already running; tray: Startup → Start Steam on startup |
+| `logging_enabled` | `false` | Write diagnostics to `dualtouch.log`; tray: Startup → Enable Logging |
 
 ## Building
 

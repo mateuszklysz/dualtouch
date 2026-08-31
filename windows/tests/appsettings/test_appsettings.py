@@ -96,6 +96,12 @@ def test_missing_settings_file_falls_back_to_defaults(tmpdir):
     )
 
 
+def test_startup_steam_and_logging_are_disabled_by_default(tmpdir):
+    s = _load_from(tmpdir)
+    assert s["start_steam_on_startup"] is False
+    assert s["logging_enabled"] is False
+
+
 def test_known_keys_coerce_to_default_types(tmpdir):
     # A hand-edited bool stored as 0/1 must come back as a real bool, and a
     # bogus numeric string must not crash the loader.

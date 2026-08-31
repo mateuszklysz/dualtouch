@@ -53,6 +53,19 @@ def _verify_force_appid(steam_path, appid):
         return True
 
 
+def _should_dispatch_startup_restore(settings, steam_running):
+    """Return whether startup may dispatch the Steam restore URL.
+
+    The restore URL is harmless when Steam is already running, but handing a
+    steam:// URL to Windows when it is not can start Steam. Keep that side
+    effect opt-in while preserving startup cleanup for an already-running
+    Steam client.
+    """
+    return bool(steam_running) or bool(
+        settings.get("start_steam_on_startup", False)
+    )
+
+
 class _LauncherMixin:
     # Attributes provided by the composed tray App (declared here so static
     # tooling knows the mixin's contract — see tray/app.py __init__).
@@ -292,13 +305,16 @@ class _LauncherMixin:
             # keyboard-layer appid FORCED (crash / killed exe — the force
             # lives in the Steam client, so restarting Steam clears it but
             # restarting DualTouch alone does not). /0 restores auto config
-            # so the controller works right away. Idempotent when nothing
-            # is forced; no-op when Steam is down (its runtime state
-            # cleared with the client anyway).
+            # so the controller works right away. Do not dispatch the URL
+            # while Steam is down unless the user explicitly opted into
+            # starting Steam on startup: the steam:// handler would
+            # otherwise launch Steam as a side effect.
             if not self._startup_appid_zeroed:
                 self._startup_appid_zeroed = True
                 try:
-                    if ssc.force_appid(0):
+                    if _should_dispatch_startup_restore(
+                        self.settings, _steam_running()
+                    ) and ssc.force_appid(0):
                         _log(
                             "steam input: startup — restored auto config (/0)"
                         )

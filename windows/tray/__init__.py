@@ -6,6 +6,8 @@ This is the bundled entry point for the portable EXE. It:
   * Requires Steam: nothing runs until the Steam client is up, and the
     launcher waits for it (the keyboard layer, the watcher and the OSK all
     assume Steam Input is present — there is no standalone/no-Steam mode).
+    Steam is not started automatically unless the tray's "Start Steam on
+    startup" option is enabled.
   * Watches the Steam Controller for the Steam+X chord and brings up the
     on-screen keyboard in-process (no subprocess startup cost). The app keeps
     working alongside Steam; Steam Input may still hold the controller and
